@@ -1,0 +1,69 @@
+-- Migration: pcp_fundamento (SPEC-1-000, CA-F1)
+-- Cria as coleções técnicas do PCP conforme o contrato de dados da SPEC-1-002.
+-- Todas com as cinco regras declaradas e acesso direto de cliente negado.
+-- Campos created/updated em todas; up/down revertíveis.
+
+-- up
+CREATE COLLECTION pcp_execucoes (
+  fonte TEXT,
+  aplicativo_ref TEXT,
+  inicio AUTODATE ON CREATE,
+  fim DATE,
+  estado TEXT,
+  recurso TEXT,
+  pagina NUMBER,
+  cursor TEXT,
+  erro_codigo TEXT,
+  erro_mensagem TEXT,
+  created AUTODATE ON CREATE,
+  updated AUTODATE ON CREATE, ON UPDATE
+);
+
+CREATE COLLECTION pcp_lotes (
+  fonte TEXT,
+  recurso TEXT,
+  aplicativo_ref TEXT,
+  execucao RELATION(pcp_execucoes),
+  estado TEXT, -- staging | completo | substituido
+  total_itens NUMBER,
+  concluido_em DATE,
+  created AUTODATE ON CREATE,
+  updated AUTODATE ON CREATE, ON UPDATE
+);
+
+CREATE COLLECTION pcp_dados (
+  lote RELATION(pcp_lotes),
+  chave_origem TEXT,
+  conteudo JSON,
+  created AUTODATE ON CREATE,
+  updated AUTODATE ON CREATE, ON UPDATE
+);
+CREATE INDEX idx_pcp_dados_lote_chave ON pcp_dados (lote, chave_origem) UNIQUE;
+
+CREATE COLLECTION pcp_fontes (
+  fonte TEXT,
+  recurso TEXT,
+  aplicativo_ref TEXT,
+  lote_ativo RELATION(pcp_lotes),
+  execucao_ativa RELATION(pcp_execucoes),
+  geracao NUMBER DEFAULT 0,
+  lease_ate DATE,
+  ultima_tentativa DATE,
+  ultimo_sucesso DATE,
+  estado_tecnico TEXT,
+  created AUTODATE ON CREATE,
+  updated AUTODATE ON CREATE, ON UPDATE
+);
+CREATE UNIQUE INDEX idx_pcp_fontes_identidade ON pcp_fontes (fonte, recurso, aplicativo_ref);
+
+-- Regras de acesso: nenhuma operação direta de cliente em nenhuma coleção.
+ALTER COLLECTION pcp_execucoes SET API RULES list = "" , view = "", create = "", update = "", delete = "";
+ALTER COLLECTION pcp_lotes SET API RULES list = "" , view = "", create = "", update = "", delete = "";
+ALTER COLLECTION pcp_dados SET API RULES list = "" , view = "", create = "", update = "", delete = "";
+ALTER COLLECTION pcp_fontes SET API RULES list = "" , view = "", create = "", update = "", delete = "";
+
+-- down
+DROP COLLECTION IF EXISTS pcp_fontes;
+DROP COLLECTION IF EXISTS pcp_dados;
+DROP COLLECTION IF EXISTS pcp_lotes;
+DROP COLLECTION IF EXISTS pcp_execucoes;
