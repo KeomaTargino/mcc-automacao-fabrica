@@ -63,7 +63,6 @@ migrate(
         createRule: '',
         updateRule: '',
         deleteRule: '',
-        indexes: ['CREATE UNIQUE INDEX idx_pcp_dados_lote_chave ON pcp_dados (lote, chave_origem)'],
         fields: [
           { name: 'chave_origem', type: 'text' },
           { name: 'conteudo', type: 'json' },
@@ -120,6 +119,8 @@ migrate(
         maxSelect: 1,
       }),
     )
+    app.save(dados)
+    dados.addIndex('idx_pcp_dados_lote_chave', true, 'lote, chave_origem', '')
     app.save(dados)
 
     const fontes = app.findCollectionByNameOrId('pcp_fontes')

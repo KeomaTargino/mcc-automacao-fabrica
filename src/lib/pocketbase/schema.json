@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T17:18:45.946Z",
+  "generatedAt": "2026-10-01T18:07:14.352Z",
   "collections": [
     {
       "name": "users",
@@ -29,19 +29,347 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "pcp_execucoes",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "fonte",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aplicativo_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inicio",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "fim",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pagina",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cursor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "erro_codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "erro_mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "pcp_lotes",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "fonte",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aplicativo_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_itens",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "concluido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "execucao",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pcp_execucoes"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "pcp_dados",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "chave_origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conteudo",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "lote",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pcp_lotes"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_pcp_dados_lote_chave` ON `pcp_dados` (lote, chave_origem)"
+      ]
+    },
+    {
+      "name": "pcp_fontes",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "fonte",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aplicativo_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "geracao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lease_ate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultima_tentativa",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultimo_sucesso",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado_tecnico",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "lote_ativo",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pcp_lotes"
+        },
+        {
+          "name": "execucao_ativa",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pcp_execucoes"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_fontes_identidade ON pcp_fontes (fonte, recurso, aplicativo_ref)"
       ]
     }
   ]
