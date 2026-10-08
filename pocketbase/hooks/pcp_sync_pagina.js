@@ -1,4 +1,4 @@
-// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O1/O2/O4
+// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O1/O2/O3/O4
 // Uma página por etapa. Recebe APENAS execucao_id: fonte/recurso/cursor carregados do
 // registro no servidor (nunca do navegador). Rede fora de transação; persistência/ativação
 // em transação curta. Falha em qualquer página NÃO ativa o lote (CA-O3).
@@ -19,7 +19,6 @@ routerAdd(
     const execucaoId = String(body.execucao_id || '')
     if (!execucaoId) return e.badRequestError('execucao_id_obrigatorio')
 
-    // Carrega execução + fonte do servidor
     let exec = null
     try {
       exec = $app.findRecordById('pcp_execucoes', execucaoId)
@@ -42,7 +41,6 @@ routerAdd(
       )
     } catch (_) {}
     if (!fonte) return e.badRequestError('fonte_ausente')
-    // Lease e geração vigentes? Execução superada não avança.
     let leaseMs = 0
     try {
       leaseMs = Date.parse(String(fonte.get('lease_ate') || ''))
@@ -90,7 +88,6 @@ routerAdd(
         })
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const j = res.json
-          // Normalização mínima por recurso (amostra real confirmada na task CA-O1–O4)
           if (recurso === 'estoque') {
             const arr = (j && (j.produtos || j.produto_servico_list_response || [])) || []
             itens = (Array.isArray(arr) ? arr : []).map((p) => ({
@@ -116,14 +113,18 @@ routerAdd(
         } else if (res.statusCode === 401 || res.statusCode === 403) {
           erroRede = 'autenticacao_recusada' // sem retry (SPEC)
         } else {
-          erroRede = 'falha_http_' + res.statusCode // 429/5xx: retry em próxima etapa (2s/5s fora do hook)
+          erroRede = 'falha_http_' + res.statusCode
         }
       } catch (err) {
         erroRede = 'falha_transporte'
       }
     } else {
-      // Mock de homologação: fixtures idênticas aos testes (identificado, nunca 'real')
-      if (paginaAtual === 1) {
+      // Mock de homologação: fixtures idênticas aos testes (identificado, nunca 'real').
+      // Injeção de falha APENAS em homologação, via secret temporário (prova CA-O3).
+      const simFalha = $secrets.get('PCP_SIMULAR_FALHA_PG2')
+      if (simFalha === 'true' && paginaAtual === 2) {
+        erroRede = 'falha_simulada_homolog'
+      } else if (paginaAtual === 1) {
         itens = [
           { produto_id: '123', local_id: '1', unidade: 'UN', saldo: 10 },
           { produto_id: '124', local_id: '1', unidade: 'KG', saldo: null },
@@ -133,17 +134,16 @@ routerAdd(
           { produto_id: '123', local_id: '2', unidade: 'UN', saldo: 5 },
           { produto_id: '125', local_id: '1', unidade: 'KG', saldo: -2 },
         ]
-      } // página 3+: vazia (fim da fonte)
+      } // página 3+: vazia (fim da fonte no mock)
     }
 
-    // Upsert da página no lote staging (idempotente por chave)
     let lote = null
     try {
       lote = $app.findFirstRecordByFilter('pcp_lotes', 'execucao = {:e}', { e: exec.id })
     } catch (_) {}
     if (!lote) return e.badRequestError('lote_ausente')
     if (erroRede) {
-      // Falha: registra tentativa, NÃO ativa, mantém lote anterior ativo na fonte
+      // Falha: registra tentativa, NÃO ativa, mantém lote anterior ativo na fonte (CA-O3)
       $app.runInTransaction((tx) => {
         exec.set('estado', 'falha')
         exec.set('pagina', paginaAtual - 1)
@@ -182,7 +182,6 @@ routerAdd(
           tx.save(novo)
         }
       }
-      const totalLote = tx.countRecords('pcp_dados') // contagem global; afina no estado
       exec.set('pagina', paginaAtual)
       exec.set('cursor', String(paginaAtual))
       tx.save(exec)
@@ -191,10 +190,9 @@ routerAdd(
       tx.save(fonte)
     })
 
-    // Última página? (mock: página 3 vazia encerra; real: menor que registros_por_pagina)
     const ultimaPagina = modo === 'mock' ? itens.length === 0 && paginaAtual > 2 : itens.length < 50
     if (ultimaPagina) {
-      // Ativação ATÔMICA: lote staging → completo; anterior → substituido
+      // Ativação ATÔMICA: staging → completo; anterior → substituido; contagem POR LOTE
       $app.runInTransaction((tx) => {
         let anterior = null
         try {
@@ -208,8 +206,11 @@ routerAdd(
           anterior.set('estado', 'substituido')
           tx.save(anterior)
         }
+        const doLote = tx.findRecordsByFilter('pcp_dados', 'lote = {:l}', '', 10000, 0, {
+          l: lote.id,
+        })
         lote.set('estado', 'completo')
-        lote.set('total_itens', tx.countRecords('pcp_dados'))
+        lote.set('total_itens', doLote.length)
         lote.set('concluido_em', new Date().toISOString())
         tx.save(lote)
         fonte.set('lote_ativo', lote.id)
