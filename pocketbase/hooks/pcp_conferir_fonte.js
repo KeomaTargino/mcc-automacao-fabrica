@@ -1,8 +1,11 @@
 // pocketbase/hooks/pcp_conferir_fonte.js — SPEC-1-002 task a5b75aca (CA-O1–O4)
 // Conferência da integração com dados autorizados:
-// 1) reconcilia contagem do lote ativo com nTotRegistros/nTotPaginas do Omie (1 chamada real);
-// 2) valida credencial real: 403/401 → credencial_recusada (sem retry, sem falso sucesso);
-// 3) registra o resultado no lote ativo (campo conferencia) e devolve relatório.
+// 1) reconcilia contagem do lote ativo com nTotRegistros do Omie (1 chamada real);
+// 2) valida credencial real: 401/403 → credencial_recusada (sem retry, sem falso sucesso);
+// 3) rate-limit/5xx/transporte → falha_transitorio com RETRY em ETAPAS SEPARADAS (2s/5s, máx. 3)
+//    — igual ao sync/pagina; a conferência só é registrada quando concluída (DEFECT-1 corrigido:
+//    antes a falha do Omie era registrada como resultado final, "queimando" a conferência);
+// 4) registra o resultado no lote ativo (campo conferencia) e devolve relatório.
 // Escrita em transação curta; rede fora de transação; sem segredo na resposta.
 routerAdd(
   'POST',
@@ -38,14 +41,25 @@ routerAdd(
     } catch (_) {}
     if (!lote) return e.badRequestError('lote_ativo_ausente')
 
-    // === Rede FORA da transação: 1 chamada real de contagem (página 1, 1 registro) ===
+    // Tentativas anteriores desta conferência (retry em etapas separadas)
+    let confAnterior = {}
+    try {
+      confAnterior = JSON.parse(lote.getString('conferencia') || '{}')
+    } catch (_) {}
+    const tentativas =
+      String(confAnterior.resultado || '').indexOf('retry_') === 0
+        ? Number(String(confAnterior.resultado).slice(6)) || 0
+        : 0
+
+    // === Rede FORA da transação: 1 chamada real de contagem ===
     const appKey = $secrets.get('OMIE_APP_KEY')
     const appSecret = $secrets.get('OMIE_APP_SECRET')
     if (!appKey || !appSecret) return e.badRequestError('credencial_ausente')
+    const conferido = Number(lote.get('total_itens') || 0)
     let esperado = 0
-    let conferido = Number(lote.get('total_itens') || 0)
     let resultado = ''
     let detalhe = ''
+    let transitorio = false
     try {
       const res = $http.send({
         url: 'https://app.omie.com.br/api/v1/estoque/consulta/',
@@ -60,7 +74,6 @@ routerAdd(
         timeout: 15,
       })
       if (res.statusCode === 401 || res.statusCode === 403) {
-        // credencial recusada: registra e NÃO altera lote (prova de credencial inválida)
         resultado = 'credencial_recusada'
         detalhe = 'HTTP ' + res.statusCode + ' do Omie na conferência'
       } else if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -78,16 +91,45 @@ routerAdd(
             esperado +
             ' (janela/defasagem esperada entre leituras)'
         }
+      } else if (res.statusCode === 429 || res.statusCode >= 500) {
+        resultado = 'falha_http_' + res.statusCode
+        transitorio = true
+        detalhe = 'fonte sob carga/limite; lote anterior preservado'
       } else {
         resultado = 'falha_http_' + res.statusCode
         detalhe = 'conferência não concluída; lote anterior preservado'
       }
     } catch (err) {
       resultado = 'falha_transporte'
-      detalhe = 'conferência não concluída; lote anterior preservado'
+      transitorio = true
+      detalhe = 'fonte inacessível agora; lote anterior preservado'
     }
 
-    // Registra a conferência no lote ativo (transação curta)
+    // Falha transitória com tentativas restantes: agenda próxima etapa, NÃO registra como final
+    if (transitorio && tentativas + 1 < 3) {
+      const proxima = tentativas + 1
+      return e.json(200, {
+        recurso,
+        lote: loteAtivoId,
+        conferencia: {
+          esperado: 0,
+          conferido,
+          resultado: 'retry_' + proxima,
+          detalhe:
+            'tentativa ' +
+            proxima +
+            ' falhou (' +
+            resultado +
+            '); repita em ' +
+            (proxima === 1 ? '2' : '5') +
+            's; lote anterior preservado',
+          conferido_em: new Date().toISOString(),
+        },
+        proxima_em_ms: proxima === 1 ? 2000 : 5000,
+      })
+    }
+
+    // Registra o resultado FINAL da conferência (transação curta)
     $app.runInTransaction((tx) => {
       lote.set(
         'conferencia',
