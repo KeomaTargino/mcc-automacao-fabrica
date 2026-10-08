@@ -6,7 +6,8 @@
 //    resultado quando concluída (DEFECT-1);
 // 4) registra o resultado no lote ativo (campo conferencia) e devolve relatório.
 // SPEC-1-004: recurso 'produtos' liberado — cadastro VAZIO na conta é reconciliável
-// (0=0 é conferência válida, não divergência); amostra do lote × Omie por código_produto.
+// (0=0 é conferência válida, não divergência); amostra do lote confere identidade própria
+// no PRÓPRIO lote (padrão de chave POR RECURSO: estoque inclui local/unidade na chave).
 // BUG-2 corrigido (log 17:27:11): JSON.parse('') devolve undefined em goja —
 // confAnterior.resultado explodia em lote novo sem conferência (400 genérico).
 routerAdd(
@@ -105,7 +106,8 @@ routerAdd(
           detalhe =
             'total do lote (' + conferido + ') = ' + cfg.chaveTotal + ' do Omie (' + esperado + ')'
           if (conferido > 0) {
-            // Amostra: até 3 registros do lote conferidos por existência de identidade na 1ª página do Omie
+            // Amostra: até 3 registros do lote conferidos por existência de identidade no
+            // PRÓPRIO lote (chave por recurso — estoque inclui local/unidade na chave)
             const regs = $app.findRecordsByFilter('pcp_dados', 'lote = {:l}', 'id', 3, 0, {
               l: loteAtivoId,
             })
@@ -116,11 +118,15 @@ routerAdd(
               } catch (_) {}
               const idLote = String(it.produto_id || '')
               if (!idLote) continue
+              const padraoChave =
+                recurso === 'estoque'
+                  ? 'omie:estoque:app1:' + idLote + ':'
+                  : 'omie:produtos:app1:' + idLote
               let achou = false
               try {
-                $app.findFirstRecordByFilter('pcp_dados', 'lote = {:l} && chave_origem = {:k}', {
+                $app.findFirstRecordByFilter('pcp_dados', 'lote = {:l} && chave_origem ~ {:k}', {
                   l: loteAtivoId,
-                  k: 'omie:produtos:app1:' + idLote,
+                  k: padraoChave,
                 })
                 achou = true
               } catch (_) {}
