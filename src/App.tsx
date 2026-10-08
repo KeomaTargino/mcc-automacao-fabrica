@@ -6,26 +6,53 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
 import Catalogo from './pages/Catalogo'
 import Painel from './pages/Painel'
+import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
+import ProtectedArea from './components/ProtectedArea'
+import { AuthProvider } from './hooks/use-auth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
 
 const App = () => (
   <BrowserRouter>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/catalogo" element={<Catalogo />} />
-          <Route path="/painel" element={<Painel />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<Layout />}>
+            <Route
+              path="/"
+              element={
+                <ProtectedArea area="painel">
+                  <Index />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/catalogo"
+              element={
+                <ProtectedArea area="catalogo">
+                  <Catalogo />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/painel"
+              element={
+                <ProtectedArea area="painel">
+                  <Painel />
+                </ProtectedArea>
+              }
+            />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 

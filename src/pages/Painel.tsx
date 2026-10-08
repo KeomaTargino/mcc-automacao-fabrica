@@ -1,37 +1,21 @@
 import { useEffect, useState } from 'react'
-import {
-  criarProviderDemonstracao,
-  type ResultadoLeitura,
-  type RecursosPCP,
-} from '@/lib/pcp/provider'
+import { obterDados, type RespostaDados } from '@/services/pcp-access'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-type Modo = 'ok' | 'vazio' | 'indisponivel' | 'falha'
+type DadosArea = NonNullable<RespostaDados['dados']>
 
-function BlocoEstado({ estado, erro }: { estado: string; erro?: string }) {
-  if (estado === 'vazio') {
-    return <p className="text-sm text-muted-foreground">Nenhum registro no momento.</p>
-  }
-  if (estado === 'indisponivel') {
-    return (
-      <p className="text-sm text-amber-600">
-        Fonte indisponível no momento. Tente novamente mais tarde.
-      </p>
-    )
-  }
-  return <p className="text-sm text-destructive">{erro ?? 'Falha na leitura dos dados.'}</p>
+function BlocoSemPermissao() {
+  return <p className="text-sm text-muted-foreground">Sem permissão para esta área.</p>
 }
 
 function Bloco({
   titulo,
-  estado,
-  erro,
+  permitido,
   children,
 }: {
   titulo: string
-  estado: string
-  erro?: string
+  permitido: boolean
   children: React.ReactNode
 }) {
   return (
@@ -39,23 +23,47 @@ function Bloco({
       <CardHeader>
         <CardTitle className="text-base">{titulo}</CardTitle>
       </CardHeader>
-      <CardContent>
-        {estado === 'ok' ? children : <BlocoEstado estado={estado} erro={erro} />}
-      </CardContent>
+      <CardContent>{permitido ? children : <BlocoSemPermissao />}</CardContent>
     </Card>
   )
 }
 
 const Painel = () => {
-  const [modo, setModo] = useState<Modo>('ok')
-  const [leitura, setLeitura] = useState<ResultadoLeitura<RecursosPCP> | null>(null)
+  const [resposta, setResposta] = useState<RespostaDados | null>(null)
+  const [erro, setErro] = useState('')
+  const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
-    const provider = criarProviderDemonstracao(modo)
-    provider.ler().then(setLeitura)
-  }, [modo])
+    let vivo = true
+    setCarregando(true)
+    obterDados()
+      .then((r) => {
+        if (vivo) setResposta(r)
+      })
+      .catch((err) => {
+        if (vivo) setErro(err?.message ?? 'Falha ao carregar os dados.')
+      })
+      .finally(() => {
+        if (vivo) setCarregando(false)
+      })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
-  const dados = leitura?.dados ?? null
+  const areas = resposta?.areas_permitidas ?? []
+  const dados = (resposta?.dados ?? {}) as DadosArea
+  const tem = (a: string) => areas.includes(a)
+
+  if (carregando) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <p className="text-sm text-muted-foreground" role="status">
+          Carregando…
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -66,27 +74,19 @@ const Painel = () => {
         Dados de demonstração — fontes ainda não conectadas.
       </div>
 
-      <div className="mb-6 flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">Simular estado da fonte:</span>
-        <div className="flex gap-2">
-          {(['ok', 'vazio', 'indisponivel', 'falha'] as Modo[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setModo(m)}
-              className={`rounded-md border px-3 py-1 text-sm capitalize ${
-                modo === m ? 'bg-primary text-primary-foreground' : 'bg-background'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+      {erro && (
+        <div
+          className="mb-6 rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          {erro}
         </div>
-      </div>
+      )}
 
       <h1 className="text-3xl font-bold mb-6">Painel operacional</h1>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Bloco titulo="Estoque" estado={leitura?.estado ?? 'falha'} erro={leitura?.erro}>
+        <Bloco titulo="Estoque" permitido={tem('estoque')}>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground">
@@ -96,7 +96,7 @@ const Painel = () => {
               </tr>
             </thead>
             <tbody>
-              {dados?.estoque.map((e) => (
+              {(dados.estoque ?? []).map((e: any) => (
                 <tr key={`${e.produto_id}-${e.local}-${e.unidade}`}>
                   <td className="py-1">
                     {e.codigo} — {e.descricao}
@@ -111,9 +111,9 @@ const Painel = () => {
           </table>
         </Bloco>
 
-        <Bloco titulo="Produção" estado={leitura?.estado ?? 'falha'} erro={leitura?.erro}>
+        <Bloco titulo="Produção" permitido={tem('producao')}>
           <ul className="text-sm space-y-2">
-            {dados?.producao.map((op) => (
+            {(dados.producao ?? []).map((op: any) => (
               <li key={op.documento_id} className="flex items-center justify-between">
                 <span>
                   {op.documento_id} — {op.produto}
@@ -129,9 +129,9 @@ const Painel = () => {
           </ul>
         </Bloco>
 
-        <Bloco titulo="Compras" estado={leitura?.estado ?? 'falha'} erro={leitura?.erro}>
+        <Bloco titulo="Compras" permitido={tem('compras')}>
           <ul className="text-sm space-y-2">
-            {dados?.compras.map((c) => (
+            {(dados.compras ?? []).map((c: any) => (
               <li key={c.documento_id} className="flex items-center justify-between">
                 <span>
                   {c.documento_id} — {c.item}
@@ -147,9 +147,9 @@ const Painel = () => {
           </ul>
         </Bloco>
 
-        <Bloco titulo="Pedidos" estado={leitura?.estado ?? 'falha'} erro={leitura?.erro}>
+        <Bloco titulo="Pedidos" permitido={tem('pedidos')}>
           <ul className="text-sm space-y-2">
-            {dados?.pedidos.map((p) => (
+            {(dados.pedidos ?? []).map((p: any) => (
               <li key={p.documento_id} className="flex items-center justify-between">
                 <span>
                   {p.documento_id}{' '}

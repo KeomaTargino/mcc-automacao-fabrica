@@ -1,24 +1,64 @@
 import { Outlet, Link, NavLink } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+import { obterPerfil, type RespostaPerfil } from '@/services/pcp-access'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-1 rounded-md text-sm ${isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`
 
+/** Itens de menu por área (SPEC-1-001 CA-A2): o menu mostra apenas áreas permitidas. */
+const ITENS: { area: string; rotulo: string; rota: string }[] = [
+  { area: 'catalogo', rotulo: 'Catálogo', rota: '/catalogo' },
+  { area: 'painel', rotulo: 'Painel', rota: '/painel' },
+]
+
 export default function Layout() {
+  const { user, isAuthenticated, signOut } = useAuth()
+  const [areas, setAreas] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAreas(null)
+      return
+    }
+    let vivo = true
+    obterPerfil()
+      .then((r: RespostaPerfil) => {
+        if (vivo) setAreas(r.perfil ? r.perfil.areas : [])
+      })
+      .catch(() => {
+        if (vivo) setAreas([])
+      })
+    return () => {
+      vivo = false
+    }
+  }, [isAuthenticated])
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <Link to="/" className="font-semibold">
             PCP American Goodies
           </Link>
           <nav className="flex gap-2" aria-label="Navegação principal">
-            <NavLink to="/catalogo" className={navLinkClass}>
-              Catálogo
-            </NavLink>
-            <NavLink to="/painel" className={navLinkClass}>
-              Painel
-            </NavLink>
+            {isAuthenticated &&
+              areas !== null &&
+              ITENS.filter((i) => areas.includes(i.area)).map((i) => (
+                <NavLink key={i.rota} to={i.rota} className={navLinkClass}>
+                  {i.rotulo}
+                </NavLink>
+              ))}
           </nav>
+          {isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground hidden sm:inline">{user?.email}</span>
+              <Button variant="outline" size="sm" onClick={signOut}>
+                Sair
+              </Button>
+            </div>
+          )}
         </div>
       </header>
       <main className="flex flex-col flex-1">
