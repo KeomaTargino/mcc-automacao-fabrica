@@ -1,6 +1,7 @@
 // pocketbase/hooks/pcp_dados_area.js — SPEC-1-001 CA-A2/A3
 // Leitura de dados por área: o servidor deriva as áreas do perfil ativo.
 // A área enviada pelo navegador é SEMPRE ignorada. Fixtures de demonstração no servidor.
+// Nota de runtime (goja): findFirstRecordByFilter exige params como objeto, não string.
 routerAdd(
   'GET',
   '/backend/v1/pcp/dados',
@@ -20,9 +21,9 @@ routerAdd(
     }
     let perfil = null
     try {
-      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u}', auth.id)
+      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u}', { u: auth.id })
     } catch (err) {
-      console.log('pcp_dados lookup falhou', auth.id, String(err))
+      console.log('pcp_dados lookup falhou', String(err))
     }
     if (!perfil) {
       return e.forbiddenError('perfil_ausente')
