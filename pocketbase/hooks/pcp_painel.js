@@ -10,6 +10,9 @@
 // (nunca "integrado"). Filtros validados no servidor (intervalo invertido = erro de campo).
 // BUG-3 (log 20:52): goja NÃO suporta object spread ({...x, campo}) — ReferenceError
 // __spreadValues; objetos construídos explicitamente em cada ramo (AP-2026-10-08-2052).
+// Vínculo do canal: MESMA prova da visão SPEC-1-003 — codigo_pedido_integracao casado com
+// pedido_id OU numero_origem (amostra provou o casamento por numero_origem); referência
+// múltipla → conflito, sem mesclar.
 routerAdd(
   'GET',
   '/backend/v1/pcp/painel',
@@ -215,7 +218,6 @@ routerAdd(
       const vistos = {}
       let oficiaisUnicos = 0
       const etapas = {}
-      const pendFiltrados = []
       for (var io = 0; io < oficiaisArr.length; io++) {
         const itO = oficiaisArr[io]
         const cab = itO.cabecalho || {}
@@ -228,11 +230,16 @@ routerAdd(
         }
       }
       // canal: índice de vínculo por referência comprovada (SPEC-1-003)
+      // casamento por pedido_id OU numero_origem (amostra da conta provou numero_origem)
       const vinculadosId = {}
+      const vinculadosNum = {}
       for (var iv = 0; iv < oficiaisArr.length; iv++) {
         const cabV = oficiaisArr[iv].cabecalho || {}
         const refInt = String(cabV.codigo_pedido_integracao || '').trim()
-        if (refInt) vinculadosId[refInt] = (vinculadosId[refInt] || 0) + 1
+        if (refInt) {
+          vinculadosId[refInt] = (vinculadosId[refInt] || 0) + 1
+          vinculadosNum[refInt] = (vinculadosNum[refInt] || 0) + 1
+        }
       }
       const classes = {
         vinculado_omie: 0,
@@ -244,22 +251,23 @@ routerAdd(
       }
       for (var ic = 0; ic < canalArr.length; ic++) {
         const itC = canalArr[ic]
+        const pidC = String(itC.pedido_id || '')
+        const numC = String(itC.numero || '')
         if (
           filtroItem &&
-          String(itC.numero || '')
-            .toLowerCase()
-            .indexOf(filtroItem) === -1 &&
-          String(itC.pedido_id || '')
-            .toLowerCase()
-            .indexOf(filtroItem) === -1
+          numC.toLowerCase().indexOf(filtroItem) === -1 &&
+          pidC.toLowerCase().indexOf(filtroItem) === -1
         )
           continue
         const status = String(itC.status || '')
         const pagamento = String(itC.pagamento || '')
+        let vRef = 0
+        if (vinculadosId[pidC]) vRef = vinculadosId[pidC]
+        else if (numC && vinculadosNum[numC]) vRef = vinculadosNum[numC]
         if (filtroStatus) {
           let classe = ''
           if (status === 'cancelled') classe = 'cancelado'
-          else if (vinculadosId[String(itC.pedido_id || '')]) classe = 'vinculado'
+          else if (vRef > 0) classe = 'vinculado'
           else classe = pagamento
           if (classe.toLowerCase().indexOf(filtroStatus) === -1) continue
         }
@@ -267,8 +275,10 @@ routerAdd(
           classes.cancelado++
           continue
         }
-        if (vinculadosId[String(itC.pedido_id || '')]) {
-          classes.vinculado_omie++
+        if (vRef > 0) {
+          if (vRef > 1)
+            classes.conflito++ // referência múltipla: originais preservados
+          else classes.vinculado_omie++ // vínculo único comprovado: conta UMA vez
           continue
         }
         if (pagamento === 'paid') {
