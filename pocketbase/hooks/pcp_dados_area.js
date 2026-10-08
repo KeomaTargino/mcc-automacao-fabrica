@@ -20,19 +20,15 @@ routerAdd(
     }
     let perfil = null
     try {
-      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u} && ativo = true', auth.id)
-    } catch (_) {}
+      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u}', auth.id)
+    } catch (err) {
+      console.log('pcp_dados lookup falhou', auth.id, String(err))
+    }
     if (!perfil) {
-      let motivo = 'perfil_ausente'
-      try {
-        const inativo = $app.findFirstRecordByFilter(
-          'pcp_perfis',
-          'usuario = {:u} && ativo = false',
-          auth.id,
-        )
-        if (inativo) motivo = 'perfil_inativo'
-      } catch (_) {}
-      return e.forbiddenError(motivo)
+      return e.forbiddenError('perfil_ausente')
+    }
+    if (!perfil.getBool('ativo')) {
+      return e.forbiddenError('perfil_inativo')
     }
     const areas = perfil.getStringSlice('areas')
     const tem = (a) => areas.indexOf(a) !== -1

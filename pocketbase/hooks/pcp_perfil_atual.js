@@ -13,19 +13,16 @@ routerAdd(
     }
     let perfil = null
     try {
-      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u} && ativo = true', auth.id)
-    } catch (_) {}
+      perfil = $app.findFirstRecordByFilter('pcp_perfis', 'usuario = {:u}', auth.id)
+    } catch (err) {
+      console.log('pcp_perfil lookup falhou', auth.id, String(err))
+    }
     if (!perfil) {
-      let motivo = 'perfil_ausente'
-      try {
-        const inativo = $app.findFirstRecordByFilter(
-          'pcp_perfis',
-          'usuario = {:u} && ativo = false',
-          auth.id,
-        )
-        if (inativo) motivo = 'perfil_inativo'
-      } catch (_) {}
-      return e.json(200, { superuser: false, perfil: null, motivo })
+      console.log('pcp_perfil sem registro', auth.id)
+      return e.json(200, { superuser: false, perfil: null, motivo: 'perfil_ausente' })
+    }
+    if (!perfil.getBool('ativo')) {
+      return e.json(200, { superuser: false, perfil: null, motivo: 'perfil_inativo' })
     }
     return e.json(200, {
       superuser: false,
