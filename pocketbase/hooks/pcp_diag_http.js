@@ -1,38 +1,38 @@
 // pocketbase/hooks/pcp_diag_http.js — DIAGNÓSTICO TEMPORÁRIO (remover após uso)
-// Prova 2: $http.send alcança app.omie.com.br? (sem segredo no corpo — só conectividade)
+// Prova 3: chamada REAL ao Omie com os secrets do servidor — qual status/corpo o runtime recebe?
+// NÃO registra segredo nem dado de produto na resposta (só status e chaves).
 routerAdd(
   'GET',
   '/backend/v1/pcp/diag-http',
   (e) => {
-    const alvos = [
-      {
-        nome: 'omie',
+    const appKey = $secrets.get('OMIE_APP_KEY')
+    const appSecret = $secrets.get('OMIE_APP_SECRET')
+    if (!appKey || !appSecret) return e.json(200, { tem_secrets: false })
+    try {
+      const res = $http.send({
         url: 'https://app.omie.com.br/api/v1/geral/produtos/',
-        metodo: 'POST',
-        corpo: JSON.stringify({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           call: 'ListarProdutosResumido',
-          app_key: 'x',
-          app_secret: 'y',
-          param: [{ pagina: 1, registros_por_pagina: 1 }],
+          app_key: appKey,
+          app_secret: appSecret,
+          param: [{ pagina: 1, registros_por_pagina: 1, apenas_importado_api: 'N' }],
         }),
-      },
-      { nome: 'httpbin', url: 'https://httpbin.org/get', metodo: 'GET', corpo: '' },
-    ]
-    const out = []
-    for (const a of alvos) {
+        timeout: 15,
+      })
+      let chaves = []
       try {
-        const opts = { url: a.url, method: a.metodo, timeout: 12 }
-        if (a.corpo) {
-          opts.headers = { 'Content-Type': 'application/json' }
-          opts.body = a.corpo
-        }
-        const res = $http.send(opts)
-        out.push({ alvo: a.nome, ok: true, status: res.statusCode })
-      } catch (err) {
-        out.push({ alvo: a.nome, ok: false, erro: String(err).slice(0, 250) })
-      }
+        chaves = Object.keys(res.json || {})
+      } catch (_) {}
+      return e.json(200, {
+        tem_secrets: true,
+        status: res.statusCode,
+        chaves_raiz: chaves.slice(0, 8),
+      })
+    } catch (err) {
+      return e.json(200, { tem_secrets: true, excecao: String(err).slice(0, 300) })
     }
-    return e.json(200, { resultados: out })
   },
   $apis.requireAuth(),
 )
