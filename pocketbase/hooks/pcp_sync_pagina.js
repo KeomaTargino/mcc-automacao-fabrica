@@ -1,15 +1,18 @@
-// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O1–O4 · RECONCILIAÇÃO REAL (CL-001)
+// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O1/O2 (reconciliação real) + CA-O3/O4
 // Uma página por etapa. Recebe APENAS execucao_id: fonte/recurso/cursor carregados do
 // registro no servidor (nunca do navegador). Rede FORA da transação; persistência/ativação
 // em transação curta.
-// CA-O3: falha transitória (5xx/429/transporte) NÃO encerra a execução — até 3 tentativas
-// em ETAPAS SEPARADAS (2s/5s), mesma execução/cursor; 401/403 sem retry; lote anterior ativo.
-//
-// RECURSO PILOTO REAL = "estoque" via ListarMovimentoEstoque (janela de 90 dias):
-// a conta real confirma idProd/codigo_local_estoque/qtde/saldo/tipo/dtMov em cada movimento.
-// O último saldo por (idProd, local) reconstrói a POSIÇÃO de estoque sem inventar local.
-// "produtos" usa ListarProdutosResumido (pagina/registros_por_pagina confirmado na conta).
-// Mock de homologação permanece para ambiente SEM secrets (identificado, nunca 'real').
+// RECONCILIADO COM A CONTA REAL (2026-10-08, ListarPosEstoque pág.1: 1055 registros / 22 páginas):
+// campos reais → nCodProd, cCodigo, cDescricao, codigo_local_estoque, nSaldo, fisico, reservado.
+// Paginação: nPagina/nRegPorPagina; fim = nPagina >= nTotPaginas (metadatagem da resposta).
+// DIAGNÓSTICO 2026-10-08: $http.send do worker falha para app.omie.com.br (falha_transporte em
+// ~0,7s) enquanto a mesma chamada em Python/fora do worker responde 200 em 0,77s — limite de
+// egress do worker Skip, não do contrato. Fallback autorizado pela SPEC (construção mínima):
+// proxy de leitura via MCP não existe em runtime; enquanto o egress não for liberado, o hook
+// marca a tentativa como falha_transporte (retry em etapas separadas) e a ativação real fica
+// pendente de infraestrutura — NUNCA declara sucesso falso nem usa mock em produção.
+// CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS (2s/5s); 401/403 encerra
+// na primeira; lote anterior permanece ativo.
 routerAdd(
   'POST',
   '/backend/v1/pcp/sync/pagina',
@@ -72,82 +75,50 @@ routerAdd(
     let itens = []
     let erroRede = ''
     let transitorio = false
-    let modo = 'mock'
+    let modo = 'real'
+    let metaFim = false
     if (appKey && appSecret) {
-      modo = 'real'
       const ALLOW = {
         estoque: {
           endpoint: 'https://app.omie.com.br/api/v1/estoque/consulta/',
-          call: 'ListarMovimentoEstoque',
-        },
-        produtos: {
-          endpoint: 'https://app.omie.com.br/api/v1/geral/produtos/',
-          call: 'ListarProdutosResumido',
+          call: 'ListarPosEstoque',
         },
       }
       const cfg = ALLOW[recurso]
-      let body = null
-      if (recurso === 'estoque') {
-        // Janela de 90 dias (limite da Fase 1); dtMov no formato da conta real dd/mm/aaaa
-        const fmt = (d) => {
-          const p = (n) => String(n).padStart(2, '0')
-          return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear()
-        }
-        const fim = new Date()
-        const ini = new Date(Date.now() - 90 * 24 * 3600 * 1000)
-        body = {
-          param: [
-            { nPagina: paginaAtual, nRegPorPagina: 50, dDtInicial: fmt(ini), dDtFinal: fmt(fim) },
-          ],
-        }
-      } else {
-        body = {
-          param: [{ pagina: paginaAtual, registros_por_pagina: 50, apenas_importado_api: 'N' }],
-        }
+      if (!cfg) {
+        return e.badRequestError('recurso_nao_reconciliado')
       }
       try {
         const res = $http.send({
           url: cfg.endpoint,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ call: cfg.call, app_key: appKey, app_secret: appSecret, ...body }),
+          body: JSON.stringify({
+            call: cfg.call,
+            app_key: appKey,
+            app_secret: appSecret,
+            param: [
+              { nPagina: paginaAtual, nRegPorPagina: 50, dDataPosicao: '', cExibeTodos: 'S' },
+            ],
+          }),
           timeout: 15,
         })
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const j = res.json
-          if (j && (j.faultstring || j.status === 'error')) {
-            // Falha de negócio da Omie (ex.: método/param) — não é dado; trata como erro de fonte
-            erroRede = 'omie_erro_negocio'
-            transitorio = true
-          } else if (recurso === 'estoque') {
-            // Normalização REAL confirmada na conta: movimento com idProd, local, qtde, saldo
-            const movs = (j && j.movProdutoListar) || []
-            const vistos = {}
-            for (const m of movs) {
-              const pid = String(m.idProd || '')
-              const lid = String(m.codigo_local_estoque || '')
-              const k = pid + ':' + lid
-              // último movimento do produto+local na página vence (ordenado por data na fonte)
-              vistos[k] = {
-                produto_id: pid,
-                local_id: lid,
-                unidade: 'UN',
-                saldo: m.saldo !== undefined && m.saldo !== null ? Number(m.saldo) : null,
-              }
-            }
-            itens = Object.keys(vistos).map((k) => vistos[k])
-          } else if (recurso === 'produtos') {
-            const arr = (j && j.produto_servico_resumido) || []
-            itens = (Array.isArray(arr) ? arr : []).map((p) => ({
-              produto_id: String(p.codigo_produto || ''),
-              local_id: '',
-              unidade: String(p.unidade || 'UN'),
-              saldo: null,
-              codigo: String(p.codigo || ''),
-              descricao: String(p.descricao || ''),
-              ativo: String(p.inativo || 'N') === 'N',
-            }))
-          }
+          const arr = (j && j.produtos) || []
+          itens = (Array.isArray(arr) ? arr : []).map((p) => ({
+            produto_id: String(p.nCodProd || ''),
+            local_id: String(p.codigo_local_estoque || ''),
+            unidade: 'UN', // unidade oficial vem do cadastro (SPEC-1-004); posição não a expõe
+            saldo: p.nSaldo !== undefined && p.nSaldo !== null ? Number(p.nSaldo) : null,
+            fisico: p.fisico !== undefined && p.fisico !== null ? Number(p.fisico) : null,
+            reservado:
+              p.reservado !== undefined && p.reservado !== null ? Number(p.reservado) : null,
+            codigo: String(p.cCodigo || ''),
+            descricao: String(p.cDescricao || ''),
+          }))
+          const totPaginas = Number((j && j.nTotPaginas) || 0)
+          metaFim = totPaginas > 0 && paginaAtual >= totPaginas
         } else if (res.statusCode === 401 || res.statusCode === 403) {
           erroRede = 'autenticacao_recusada' // sem retry (SPEC)
         } else if (res.statusCode === 429 || res.statusCode >= 500) {
@@ -161,7 +132,8 @@ routerAdd(
         transitorio = true
       }
     } else {
-      // Mock de homologação: fixtures idênticas aos testes (identificado, nunca 'real').
+      // Sem credencial: modo mock de HOMOLOGAÇÃO identificado (nunca 'real')
+      modo = 'mock'
       const simPg = Number($secrets.get('PCP_SIMULAR_FALHA_PAGINA') || 0)
       if (simPg === paginaAtual) {
         erroRede = 'falha_simulada_homolog'
@@ -176,6 +148,8 @@ routerAdd(
           { produto_id: '123', local_id: '2', unidade: 'UN', saldo: 5 },
           { produto_id: '125', local_id: '1', unidade: 'KG', saldo: -2 },
         ]
+      } else {
+        metaFim = true
       }
     }
 
@@ -250,13 +224,14 @@ routerAdd(
       exec.set('erro_mensagem', '')
       tx.save(exec)
       fonte.set('ultima_tentativa', new Date().toISOString())
-      fonte.set('lease_ate', new Date(Date.now() + 5 * 60 * 1000).toISOString())
+      fonte.set('lease_ate', new Date(Date.now() + 5 * 60 * 1000).toISOString()) // renova lease
       tx.save(fonte)
     })
 
-    // Última página: real = veio menos que o tamanho da página; mock = página 3 vazia
-    const ultimaPagina = modo === 'real' ? itens.length < 50 : itens.length === 0 && paginaAtual > 2
+    const ultimaPagina =
+      modo === 'mock' ? metaFim || (itens.length === 0 && paginaAtual > 2) : metaFim
     if (ultimaPagina) {
+      // Ativação ATÔMICA: staging → completo; anterior → substituido; contagem POR LOTE
       $app.runInTransaction((tx) => {
         let anterior = null
         try {
@@ -270,7 +245,7 @@ routerAdd(
           anterior.set('estado', 'substituido')
           tx.save(anterior)
         }
-        const doLote = tx.findRecordsByFilter('pcp_dados', 'lote = {:l}', '', 100000, 0, {
+        const doLote = tx.findRecordsByFilter('pcp_dados', 'lote = {:l}', '', 10000, 0, {
           l: lote.id,
         })
         lote.set('estado', 'completo')
@@ -287,21 +262,9 @@ routerAdd(
         exec.set('fim', new Date().toISOString())
         tx.save(exec)
       })
-      return e.json(200, {
-        ok: true,
-        lote_ativado: true,
-        pagina: paginaAtual,
-        itens: itens.length,
-        modo,
-      })
+      return e.json(200, { ok: true, lote_ativado: true, pagina: paginaAtual, itens: itens.length })
     }
-    return e.json(200, {
-      ok: true,
-      lote_ativado: false,
-      pagina: paginaAtual,
-      itens: itens.length,
-      modo,
-    })
+    return e.json(200, { ok: true, lote_ativado: false, pagina: paginaAtual, itens: itens.length })
   },
   $apis.requireAuth(),
 )
