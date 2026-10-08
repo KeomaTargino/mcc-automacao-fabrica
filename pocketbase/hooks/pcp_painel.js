@@ -3,11 +3,13 @@
 // (pcp_fontes/pcp_lotes/pcp_dados) — sem nova integração, sem acesso do navegador a
 // coleção bruta ou segredo. Área 'painel' autoriza abrir a tela; CADA BLOCO exige
 // separadamente a sua área (gestão não obtém tudo por padrão — CA-P4).
-// Por bloco devolve: autorizado, indisponível (motivo), fonte/recurso/lote/ultimo_sucesso/
+// Por bloco devolve: autorizado, disponível/motivo, fonte/recurso/lote/ultimo_sucesso/
 // estado_tecnico, resumo e itens (com filtros) e pendências — distinguindo ZERO VÁLIDO de
 // INDISPONÍVEL de LOTE ANTIGO (CA-P3). Nenhuma soma entre unidades distintas; saldo
 // indisponível não é zero; produção/compras sem fonte na Fase 1 → bloqueado explícito
 // (nunca "integrado"). Filtros validados no servidor (intervalo invertido = erro de campo).
+// BUG-3 (log 20:52): goja NÃO suporta object spread ({...x, campo}) — ReferenceError
+// __spreadValues; objetos construídos explicitamente em cada ramo (AP-2026-10-08-2052).
 routerAdd(
   'GET',
   '/backend/v1/pcp/painel',
@@ -44,10 +46,12 @@ routerAdd(
       return e.badRequestError('filtro_invalido: intervalo invertido')
     }
 
-    const temArea = (a) => areas.indexOf(a) !== -1
+    const temArea = function (a) {
+      return areas.indexOf(a) !== -1
+    }
 
     // helper: metadados de um fonte/recurso (lote ativo, último sucesso, estado técnico)
-    const fonteMeta = (fonteNome, recurso) => {
+    const fonteMeta = function (fonteNome, recurso) {
       let f = null
       try {
         f = $app.findFirstRecordByFilter(
@@ -65,18 +69,18 @@ routerAdd(
       }
     }
 
-    // helper: carrega itens do lote ativo de um recurso (array de JSON) — vazio se sem lote
-    const itensDoLote = (meta) => {
+    // helper: carrega itens do lote ativo de um recurso (array de JSON) — null se sem lote
+    const itensDoLote = function (meta) {
       if (!meta || !meta.lote_ativo) return null
       try {
         const regs = $app.findRecordsByFilter('pcp_dados', 'lote = {:l}', 'id', 20000, 0, {
           l: meta.lote_ativo,
         })
         const arr = []
-        for (const r of regs) {
+        for (var i = 0; i < regs.length; i++) {
           let it = {}
           try {
-            it = JSON.parse(r.getString('conteudo') || '{}') || {}
+            it = JSON.parse(regs[i].getString('conteudo') || '{}') || {}
           } catch (_) {}
           arr.push(it)
         }
@@ -87,12 +91,14 @@ routerAdd(
     }
 
     // === BLOCO ESTOQUE (área estoque) — posição atual do último lote; nunca soma unidades ===
-    let estoque = { autorizado: temArea('estoque') }
-    if (estoque.autorizado) {
+    let estoque = null
+    if (!temArea('estoque')) {
+      estoque = { autorizado: false }
+    } else {
       const meta = fonteMeta('omie', 'estoque')
       if (!meta || !meta.lote_ativo) {
         estoque = {
-          ...estoque,
+          autorizado: true,
           disponivel: false,
           motivo: 'sem_lote_ativo',
           fonte: 'omie',
@@ -101,7 +107,9 @@ routerAdd(
         }
       } else {
         const arr = itensDoLote(meta) || []
-        const filtrados = arr.filter((it) => {
+        const filtrados = []
+        for (var ie = 0; ie < arr.length; ie++) {
+          const it = arr[ie]
           if (
             filtroItem &&
             String(it.codigo || '')
@@ -111,24 +119,44 @@ routerAdd(
               .toLowerCase()
               .indexOf(filtroItem) === -1
           )
-            return false
+            continue
           if (
             filtroLocal &&
             String(it.local_id || '')
               .toLowerCase()
               .indexOf(filtroLocal) === -1
           )
-            return false
-          return true
-        })
+            continue
+          filtrados.push(it)
+        }
         // resumo por UNIDADE (nunca soma KG com UN)
         const porUnidade = {}
-        for (const it of filtrados) {
-          const u = String(it.unidade || 'sem_unidade')
+        let saldoAusente = 0
+        for (var iu = 0; iu < filtrados.length; iu++) {
+          const it2 = filtrados[iu]
+          const u = String(it2.unidade || 'sem_unidade')
           porUnidade[u] = (porUnidade[u] || 0) + 1
+          if (it2.saldo === null || it2.saldo === undefined) saldoAusente++
         }
+        const itens = []
+        for (var ii = 0; ii < filtrados.length && ii < 50; ii++) {
+          const it3 = filtrados[ii]
+          itens.push({
+            produto_id: it3.produto_id,
+            codigo: it3.codigo,
+            descricao: it3.descricao,
+            local_id: it3.local_id,
+            unidade: it3.unidade,
+            saldo: it3.saldo,
+            fisico: it3.fisico,
+            reservado: it3.reservado,
+          })
+        }
+        const pend = []
+        if (saldoAusente > 0)
+          pend.push(saldoAusente + ' linha(s) com saldo ausente na fonte (null ≠ zero).')
         estoque = {
-          ...estoque,
+          autorizado: true,
           disponivel: true,
           fonte: 'omie',
           recurso: 'estoque',
@@ -137,33 +165,20 @@ routerAdd(
           estado_tecnico: meta.estado_tecnico,
           total: filtrados.length,
           resumo_por_unidade: porUnidade,
-          pendencias:
-            filtrados.filter((it) => it.saldo === null || it.saldo === undefined).length > 0
-              ? [
-                  filtrados.filter((it) => it.saldo === null || it.saldo === undefined).length +
-                    ' linha(s) com saldo ausente na fonte (null ≠ zero).',
-                ]
-              : [],
-          itens: filtrados.slice(0, 50).map((it) => ({
-            produto_id: it.produto_id,
-            codigo: it.codigo,
-            descricao: it.descricao,
-            local_id: it.local_id,
-            unidade: it.unidade,
-            saldo: it.saldo,
-            fisico: it.fisico,
-            reservado: it.reservado,
-          })),
+          pendencias: pend,
+          itens: itens,
           nota: 'posição atual do último lote (a fonte não expõe histórico diário)',
         }
       }
     }
 
     // === BLOCO PRODUÇÃO (área producao) — SEM fonte na Fase 1: bloqueado explícito ===
-    let producao = { autorizado: temArea('producao') }
-    if (producao.autorizado) {
+    let producao = null
+    if (!temArea('producao')) {
+      producao = { autorizado: false }
+    } else {
       producao = {
-        ...producao,
+        autorizado: true,
         disponivel: false,
         motivo: 'fonte_nao_integrada_na_fase_1',
         pendencias: [
@@ -173,10 +188,12 @@ routerAdd(
     }
 
     // === BLOCO COMPRAS (área compras) — SEM fonte na Fase 1: bloqueado explícito ===
-    let compras = { autorizado: temArea('compras') }
-    if (compras.autorizado) {
+    let compras = null
+    if (!temArea('compras')) {
+      compras = { autorizado: false }
+    } else {
       compras = {
-        ...compras,
+        autorizado: true,
         disponivel: false,
         motivo: 'fonte_nao_integrada_na_fase_1',
         pendencias: [
@@ -186,8 +203,10 @@ routerAdd(
     }
 
     // === BLOCO PEDIDOS (área pedidos) — oficiais elegíveis Omie + complementares separados ===
-    let pedidos = { autorizado: temArea('pedidos') }
-    if (pedidos.autorizado) {
+    let pedidos = null
+    if (!temArea('pedidos')) {
+      pedidos = { autorizado: false }
+    } else {
       const metaOmie = fonteMeta('omie', 'pedidos')
       const metaNs = fonteMeta('nuvemshop', 'pedidos')
       const oficiaisArr = itensDoLote(metaOmie) || []
@@ -196,20 +215,23 @@ routerAdd(
       const vistos = {}
       let oficiaisUnicos = 0
       const etapas = {}
-      for (const it of oficiaisArr) {
-        const cab = it.cabecalho || {}
+      const pendFiltrados = []
+      for (var io = 0; io < oficiaisArr.length; io++) {
+        const itO = oficiaisArr[io]
+        const cab = itO.cabecalho || {}
         const id = String(cab.codigo_pedido || '')
-        if (!id || vistos[id]) continue
-        vistos[id] = true
-        oficiaisUnicos++
-        const et = String(cab.etapa || 'sem_etapa')
-        etapas[et] = (etapas[et] || 0) + 1
+        if (id && !vistos[id]) {
+          vistos[id] = true
+          oficiaisUnicos++
+          const et = String(cab.etapa || 'sem_etapa')
+          etapas[et] = (etapas[et] || 0) + 1
+        }
       }
-      // canal: classificação na precedência da SPEC-1-003 (com vínculo por referência comprovada)
+      // canal: índice de vínculo por referência comprovada (SPEC-1-003)
       const vinculadosId = {}
-      for (const it of oficiaisArr) {
-        const cab = it.cabecalho || {}
-        const refInt = String(cab.codigo_pedido_integracao || '').trim()
+      for (var iv = 0; iv < oficiaisArr.length; iv++) {
+        const cabV = oficiaisArr[iv].cabecalho || {}
+        const refInt = String(cabV.codigo_pedido_integracao || '').trim()
         if (refInt) vinculadosId[refInt] = (vinculadosId[refInt] || 0) + 1
       }
       const classes = {
@@ -220,38 +242,32 @@ routerAdd(
         conflito: 0,
         status_nao_mapeado: 0,
       }
-      const canalFiltrado = canalArr.filter((it) => {
+      for (var ic = 0; ic < canalArr.length; ic++) {
+        const itC = canalArr[ic]
         if (
           filtroItem &&
-          String(it.numero || '')
+          String(itC.numero || '')
             .toLowerCase()
             .indexOf(filtroItem) === -1 &&
-          String(it.pedido_id || '')
+          String(itC.pedido_id || '')
             .toLowerCase()
             .indexOf(filtroItem) === -1
         )
-          return false
+          continue
+        const status = String(itC.status || '')
+        const pagamento = String(itC.pagamento || '')
         if (filtroStatus) {
-          const p = String(it.pagamento || '').toLowerCase()
-          const s = String(it.status || '').toLowerCase()
-          const classe =
-            s === 'cancelled'
-              ? 'cancelado'
-              : String(vinculadosId[it.pedido_id || ''])
-                ? 'vinculado'
-                : p
-          if (classe.indexOf(filtroStatus) === -1) return false
+          let classe = ''
+          if (status === 'cancelled') classe = 'cancelado'
+          else if (vinculadosId[String(itC.pedido_id || '')]) classe = 'vinculado'
+          else classe = pagamento
+          if (classe.toLowerCase().indexOf(filtroStatus) === -1) continue
         }
-        return true
-      })
-      for (const it of canalFiltrado) {
-        const status = String(it.status || '')
-        const pagamento = String(it.pagamento || '')
         if (status === 'cancelled') {
           classes.cancelado++
           continue
         }
-        if (vinculadosId[String(it.pedido_id || '')]) {
+        if (vinculadosId[String(itC.pedido_id || '')]) {
           classes.vinculado_omie++
           continue
         }
@@ -265,37 +281,56 @@ routerAdd(
         }
         classes.status_nao_mapeado++
       }
-      pedidos = {
-        ...pedidos,
-        oficiais: {
-          disponivel: Boolean(metaOmie && metaOmie.lote_ativo),
-          motivo: metaOmie && metaOmie.lote_ativo ? undefined : 'sem_lote_ativo',
+      const pendPed = []
+      if (!metaOmie || !metaOmie.lote_ativo)
+        pendPed.push('Lote oficial de pedidos do Omie ausente.')
+      if (!metaNs || !metaNs.lote_ativo) pendPed.push('Lote do canal Nuvemshop ausente.')
+      let oficiaisBloco = null
+      if (metaOmie && metaOmie.lote_ativo) {
+        oficiaisBloco = {
+          disponivel: true,
           fonte: 'omie',
           recurso: 'pedidos',
-          lote: metaOmie ? metaOmie.lote_ativo : '',
-          ultimo_sucesso: metaOmie ? metaOmie.ultimo_sucesso : null,
-          estado_tecnico: metaOmie ? metaOmie.estado_tecnico : '',
+          lote: metaOmie.lote_ativo,
+          ultimo_sucesso: metaOmie.ultimo_sucesso,
+          estado_tecnico: metaOmie.estado_tecnico,
           total_por_id_unico: oficiaisUnicos,
           por_etapa: etapas,
           nota: 'contagem por ID único (código do pedido), não por linhas de item',
-        },
-        complementares: {
-          disponivel: Boolean(metaNs && metaNs.lote_ativo),
-          motivo: metaNs && metaNs.lote_ativo ? undefined : 'sem_lote_ativo',
+        }
+      } else {
+        oficiaisBloco = {
+          disponivel: false,
+          motivo: 'sem_lote_ativo',
+          fonte: 'omie',
+          recurso: 'pedidos',
+        }
+      }
+      let complementaresBloco = null
+      if (metaNs && metaNs.lote_ativo) {
+        complementaresBloco = {
+          disponivel: true,
           fonte: 'nuvemshop',
           recurso: 'pedidos',
-          lote: metaNs ? metaNs.lote_ativo : '',
-          ultimo_sucesso: metaNs ? metaNs.ultimo_sucesso : null,
-          estado_tecnico: metaNs ? metaNs.estado_tecnico : '',
+          lote: metaNs.lote_ativo,
+          ultimo_sucesso: metaNs.ultimo_sucesso,
+          estado_tecnico: metaNs.estado_tecnico,
           contagem: classes,
           aviso: 'intenção de compra NÃO soma ao oficial; vínculo comprovado conta UMA vez',
-        },
-        pendencias: [
-          ...(!metaOmie || !metaOmie.lote_ativo
-            ? ['Lote oficial de pedidos do Omie ausente.']
-            : []),
-          ...(!metaNs || !metaNs.lote_ativo ? ['Lote do canal Nuvemshop ausente.'] : []),
-        ],
+        }
+      } else {
+        complementaresBloco = {
+          disponivel: false,
+          motivo: 'sem_lote_ativo',
+          fonte: 'nuvemshop',
+          recurso: 'pedidos',
+        }
+      }
+      pedidos = {
+        autorizado: true,
+        oficiais: oficiaisBloco,
+        complementares: complementaresBloco,
+        pendencias: pendPed,
       }
     }
 
@@ -309,7 +344,7 @@ routerAdd(
         status: filtroStatus,
         local: filtroLocal,
       },
-      blocos: { estoque, producao, compras, pedidos },
+      blocos: { estoque: estoque, producao: producao, compras: compras, pedidos: pedidos },
     })
   },
   $apis.requireAuth(),
