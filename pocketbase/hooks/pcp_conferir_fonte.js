@@ -1,10 +1,12 @@
-// pocketbase/hooks/pcp_conferir_fonte.js — SPEC-1-002 task a5b75aca (CA-O1–O4)
+// pocketbase/hooks/pcp_conferir_fonte.js — SPEC-1-002 (a5b75aca) + SPEC-1-004 (0113090a)
 // Conferência da integração com dados autorizados:
 // 1) reconcilia contagem do lote ativo com nTotRegistros do Omie (1 chamada real);
 // 2) valida credencial real: 401/403 → credencial_recusada (sem retry, sem falso sucesso);
 // 3) rate-limit/5xx/transporte → retry em ETAPAS SEPARADAS (2s/5s, máx. 3) — só registra
 //    resultado quando concluída (DEFECT-1);
 // 4) registra o resultado no lote ativo (campo conferencia) e devolve relatório.
+// SPEC-1-004: recurso 'produtos' liberado — cadastro VAZIO na conta é reconciliável
+// (0=0 é conferência válida, não divergência); amostra do lote × Omie por código_produto.
 // BUG-2 corrigido (log 17:27:11): JSON.parse('') devolve undefined em goja —
 // confAnterior.resultado explodia em lote novo sem conferência (400 genérico).
 routerAdd(
@@ -22,7 +24,23 @@ routerAdd(
     }
     const body = e.requestInfo().body
     const recurso = String(body.recurso || 'estoque')
-    if (recurso !== 'estoque') return e.badRequestError('recurso_nao_reconciliado')
+    // Allowlist de conferência (recursos reconciliados com as contas reais)
+    const ALLOW_CONF = {
+      estoque: {
+        endpoint: 'https://app.omie.com.br/api/v1/estoque/consulta/',
+        call: 'ListarPosEstoque',
+        param: () => [{ nPagina: 1, nRegPorPagina: 1, dDataPosicao: '', cExibeTodos: 'S' }],
+        chaveTotal: 'nTotRegistros',
+      },
+      produtos: {
+        endpoint: 'https://app.omie.com.br/api/v1/geral/produtos/',
+        call: 'ListarProdutosResumido',
+        param: () => [{ pagina: 1, registros_por_pagina: 1 }],
+        chaveTotal: 'total_de_registros',
+      },
+    }
+    const cfg = ALLOW_CONF[recurso]
+    if (!cfg) return e.badRequestError('recurso_nao_reconciliado')
 
     let fonte = null
     try {
@@ -61,16 +79,17 @@ routerAdd(
     let resultado = ''
     let detalhe = ''
     let transitorio = false
+    let amostraDivergente = []
     try {
       const res = $http.send({
-        url: 'https://app.omie.com.br/api/v1/estoque/consulta/',
+        url: cfg.endpoint,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          call: 'ListarPosEstoque',
+          call: cfg.call,
           app_key: appKey,
           app_secret: appSecret,
-          param: [{ nPagina: 1, nRegPorPagina: 1, dDataPosicao: '', cExibeTodos: 'S' }],
+          param: cfg.param(),
         }),
         timeout: 15,
       })
@@ -79,10 +98,41 @@ routerAdd(
         detalhe = 'HTTP ' + res.statusCode + ' do Omie na conferência'
       } else if (res.statusCode >= 200 && res.statusCode < 300) {
         const j = res.json
-        esperado = Number((j && j.nTotRegistros) || 0)
-        if (esperado > 0 && esperado === conferido) {
+        esperado = Number((j && j[cfg.chaveTotal]) || 0)
+        if (esperado === conferido) {
+          // 0=0 (cadastro vazio) e N=N são conferências válidas
           resultado = 'conferido'
-          detalhe = 'total do lote (' + conferido + ') = nTotRegistros do Omie (' + esperado + ')'
+          detalhe =
+            'total do lote (' + conferido + ') = ' + cfg.chaveTotal + ' do Omie (' + esperado + ')'
+          if (conferido > 0) {
+            // Amostra: até 3 registros do lote conferidos por existência de identidade na 1ª página do Omie
+            const regs = $app.findRecordsByFilter('pcp_dados', 'lote = {:l}', 'id', 3, 0, {
+              l: loteAtivoId,
+            })
+            for (const r of regs) {
+              let it = {}
+              try {
+                it = JSON.parse(r.getString('conteudo') || '{}') || {}
+              } catch (_) {}
+              const idLote = String(it.produto_id || '')
+              if (!idLote) continue
+              let achou = false
+              try {
+                $app.findFirstRecordByFilter('pcp_dados', 'lote = {:l} && chave_origem = {:k}', {
+                  l: loteAtivoId,
+                  k: 'omie:produtos:app1:' + idLote,
+                })
+                achou = true
+              } catch (_) {}
+              if (!achou) amostraDivergente.push(idLote)
+            }
+            if (amostraDivergente.length > 0) {
+              detalhe +=
+                '; amostra com ' +
+                amostraDivergente.length +
+                ' registro(s) sem identidade própria (revisar)'
+            }
+          }
         } else {
           resultado = 'divergencia'
           detalhe =
@@ -139,6 +189,7 @@ routerAdd(
           conferido,
           resultado,
           detalhe,
+          amostra_divergente: amostraDivergente,
           conferido_em: new Date().toISOString(),
         }),
       )
