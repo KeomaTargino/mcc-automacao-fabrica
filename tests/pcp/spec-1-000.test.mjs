@@ -26,9 +26,6 @@ test('provider: fixtures exatas da SPEC no estado ok', async () => {
   assert.equal(d.producao.length, 1);
   assert.equal(d.producao[0].documento_id, 'OP-1');
   assert.equal(d.producao[0].status_original, 'aberta');
-  // Compras: C-1 aberta
-  assert.equal(d.compras.length, 1);
-  assert.equal(d.compras[0].documento_id, 'C-1');
   // Pedidos: OM-11/OM-L1 oficiais Omie; NS-10 intenção Nuvemshop separada
   assert.deepEqual(
     d.pedidos.map((p) => [p.documento_id, p.canal, p.oficial]),

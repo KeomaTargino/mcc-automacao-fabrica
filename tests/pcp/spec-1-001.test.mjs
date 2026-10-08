@@ -25,6 +25,12 @@ async function login(email) {
   return json.token
 }
 
+// PocketBase normaliza a mensagem do erro (ex.: "Perfil_ausente.") — compara sem caixa/ponto.
+const msgDe = async (res) => {
+  const json = await res.json().catch(() => ({}))
+  return String(json.message || json.data?.message || '').toLowerCase().replace(/\.$/, '')
+}
+
 test.skipIf(!temCredenciais)('CA-A2: perfil PCP recebe estoque e NÃO recebe pedidos pela rota autorizada', async () => {
   const token = await login(EMAIL_PCP)
   const res = await fetch(`${URL_BASE}/backend/v1/pcp/dados`, {
@@ -40,7 +46,7 @@ test.skipIf(!temCredenciais)('CA-A2: perfil PCP recebe estoque e NÃO recebe ped
   assert.ok(!json.areas_permitidas.includes('pedidos'))
 })
 
-test.skipIf(!temCredenciais)('CA-A2: perfil Compras recebe compras/painel e NÃO recebe pedidos', async () => {
+test.skipIf(!temCredenciais)('CA-A2: perfil Compras recebe compras e NÃO recebe pedidos nem estoque', async () => {
   const token = await login(EMAIL_COMPRAS)
   const res = await fetch(`${URL_BASE}/backend/v1/pcp/dados`, {
     headers: { Authorization: token },
@@ -54,7 +60,7 @@ test.skipIf(!temCredenciais)('CA-A2: perfil Compras recebe compras/painel e NÃO
 
 test.skipIf(!temCredenciais)('CA-A2: leitura DIRETA de coleções de dados é NEGADA (API sem rota autorizada)', async () => {
   const token = await login(EMAIL_PCP)
-  for (const col of ['pcp_dados', 'pcp_fontes', 'pcp_lotes', 'pcp_execucoes']) {
+  for (const col of ['pcp_dados', 'pcp_fontes', 'pcp_lotes', 'pcp_execucoes', 'pcp_perfis']) {
     const res = await fetch(`${URL_BASE}/api/collections/${col}/records`, {
       headers: { Authorization: token },
     })
@@ -68,8 +74,7 @@ test.skipIf(!temCredenciais)('CA-A3: usuário sem perfil não recebe dado — me
     headers: { Authorization: token },
   })
   assert.equal(res.status, 403)
-  const json = await res.json()
-  assert.equal(json.message, 'perfil_ausente')
+  assert.equal(await msgDe(res), 'perfil_ausente')
 })
 
 test.skipIf(!temCredenciais)('CA-A3: perfil inativo é recusado', async () => {
@@ -78,8 +83,7 @@ test.skipIf(!temCredenciais)('CA-A3: perfil inativo é recusado', async () => {
     headers: { Authorization: token },
   })
   assert.equal(res.status, 403)
-  const json = await res.json()
-  assert.equal(json.message, 'perfil_inativo')
+  assert.equal(await msgDe(res), 'perfil_inativo')
 })
 
 test.skipIf(!temCredenciais)('CA-A3: token expirado/inválido → 401', async () => {
@@ -91,7 +95,6 @@ test.skipIf(!temCredenciais)('CA-A3: token expirado/inválido → 401', async ()
 
 test.skipIf(!temCredenciais)('CA-A3: alteração do próprio perfil é negada', async () => {
   const token = await login(EMAIL_PCP)
-  // descobre o id do próprio perfil via rota autorizada
   const rPerfil = await fetch(`${URL_BASE}/backend/v1/pcp/perfil`, {
     headers: { Authorization: token },
   })
