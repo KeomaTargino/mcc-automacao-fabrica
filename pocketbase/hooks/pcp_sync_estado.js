@@ -1,6 +1,8 @@
-// pocketbase/hooks/pcp_sync_estado.js — SPEC-1-002 CA-O1/O2
+// pocketbase/hooks/pcp_sync_estado.js — SPEC-1-002 CA-O1/O2 + conferência a5b75aca
 // Metadados por área: sem dado bruto, sem segredo. Mostra último sucesso, última tentativa,
 // lote ativo e estado técnico (indisponível ≠ zero; falha ≠ dado novo).
+// Conferência real (2026-10-08): amostra do lote ativo bate com o Omie (nTotRegistros) —
+// total_itens inclui conferencia: {esperado, conferido_em, resultado} quando já houve conferência.
 routerAdd(
   'GET',
   '/backend/v1/pcp/sync/estado',
@@ -17,7 +19,6 @@ routerAdd(
     // Recursos visíveis por área: estoque→[estoque], produtos→[catalogo]; outros entram nas próximas tasks.
     const mapaAreas = { estoque: 'estoque', produtos: 'catalogo' }
 
-    const colFontes = $app.findCollectionByNameOrId('pcp_fontes')
     const todos = $app.findRecordsByFilter('pcp_fontes', "fonte = 'omie'", 'recurso', 50, 0)
     const fontes = []
     for (const f of todos) {
@@ -25,11 +26,21 @@ routerAdd(
       const area = mapaAreas[recurso]
       if (!area || areas.indexOf(area) === -1) continue // diagnóstico só da área permitida
       let totalItens = 0
+      let conferencia = null
       const loteAtivo = f.getString('lote_ativo')
       if (loteAtivo) {
         try {
           const lote = $app.findRecordById('pcp_lotes', loteAtivo)
           totalItens = Number(lote.get('total_itens') || 0)
+          // conferência registrada no lote ativo (gravada pela rota de conferência)
+          const confStr = lote.getString('conferencia') || ''
+          if (confStr) {
+            try {
+              conferencia = JSON.parse(confStr)
+            } catch (_) {
+              conferencia = null
+            }
+          }
         } catch (_) {}
       }
       fontes.push({
@@ -41,6 +52,7 @@ routerAdd(
         ultima_tentativa: f.getString('ultima_tentativa') || null,
         ultimo_sucesso: f.getString('ultimo_sucesso') || null,
         em_andamento: Boolean(f.getString('execucao_ativa')),
+        conferencia,
       })
     }
     return e.json(200, { pode_atualizar_fontes: podeSync, fontes })

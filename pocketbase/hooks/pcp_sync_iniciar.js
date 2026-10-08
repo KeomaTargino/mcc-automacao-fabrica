@@ -1,5 +1,5 @@
-// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002 CA-O1/O2
-// Inicia execução de sincronização por recurso (allowlist de consulta).
+// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002 CA-O1/O2 + conferência a5b75aca
+// Inicia execução de sincronização por recurso (allowlist de consulta RECONCILIADA com a conta real).
 // Lease de 5 minutos + geração crescente; execução ativa devolvida em vez de duplicar.
 // Escrita em transação curta; nenhuma rede aqui.
 routerAdd(
@@ -17,18 +17,25 @@ routerAdd(
     }
     const body = e.requestInfo().body
     const recurso = String(body.recurso || '')
+    // Allowlist reconciliada com a conta real (2026-10-08):
+    // - estoque: ListarPosEstoque provado (1055 registros/22 páginas, campos nCodProd/cCodigo/...)
+    // - produtos: ListarProdutosResumido existe no catálogo, mas AMOSTRA VAZIA na conta
+    //   (0 registros) — sem amostra reconciliada, execução é recusada (recurso_nao_reconciliado).
     const ALLOW = {
       estoque: {
         endpoint: 'https://app.omie.com.br/api/v1/estoque/consulta/',
-        call: 'ConsultaEstoque',
+        call: 'ListarPosEstoque',
+        reconciliado: true,
       },
       produtos: {
         endpoint: 'https://app.omie.com.br/api/v1/geral/produtos/',
         call: 'ListarProdutosResumido',
+        reconciliado: false,
       },
     }
     const cfg = ALLOW[recurso]
     if (!cfg) return e.badRequestError('recurso_desconhecido')
+    if (!cfg.reconciliado) return e.badRequestError('recurso_nao_reconciliado')
 
     const agoraISO = new Date().toISOString()
     const leaseISO = new Date(Date.now() + 5 * 60 * 1000).toISOString()
