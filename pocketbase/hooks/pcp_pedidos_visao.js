@@ -6,7 +6,10 @@
 // (4) paid sem vínculo → pago_sem_vinculo; (5) pending/authorized → pendente_pagamento;
 // (6) qualquer outro (voided, refunded, ...) → status_nao_mapeado (estado bruto preservado).
 // CA-N3: vínculo SOMENTE por referência comprovada (codigo_pedido_integracao do Omie
-// = pedido_origem_id do canal). Mesma pessoa/valor/data NUNCA mescla (sem suposição).
+// = referência do canal). Mesma pessoa/valor/data NUNCA mescla (sem suposição).
+// A referência comprovada é o valor GRAVADO pela integração no campo do Omie — casado
+// exatamente (string) com o identificador correspondente do canal (id OU numero_origem,
+// conforme a amostra comprovar; nunca id≡number por coincidência).
 // Duplicação no Omie: 1 pedido oficial por codigo_pedido — verificação embutida na visão
 // (duplicados_oficiais) para provar que a contagem consolidada não infla o total oficial.
 routerAdd(
@@ -50,11 +53,13 @@ routerAdd(
     const naoMapeados = {}
     let amostraPendente = null
     let amostraPago = null
-    // CA-N3: índice de vínculo por referência comprovada — construído do lote Omie ativo
+    // CA-N3: índices de referência comprovada construídos do lote Omie ativo
     // (codigo_pedido_integracao → codigo_pedido). Sem referência no canal, vínculo fica 0.
-    let vinculados = {} // pedido_origem_id → {omie_id, referencias: N}
-    let conflitos = {} // pedido_origem_id → N referências (2+ = conflito)
+    let vinculadosId = {} // refInt → {omie_id, referencias} (casamento por pedido_origem_id)
+    let vinculadosNum = {} // refInt → {omie_id, referencias} (casamento por numero_origem)
+    let conflitos = {} // referência com 2+ oficiais (qualquer casamento)
     let duplicadosOficiais = [] // codigo_pedido Omie repetido no lote oficial (não deve acontecer)
+    let amostraRefsOmie = [] // diagnóstico: primeiras referências gravadas no Omie
     try {
       let fonteOmie = null
       try {
@@ -77,7 +82,7 @@ routerAdd(
           } catch (_) {}
           const cab = it.cabecalho || {}
           const codPedido = String(cab.codigo_pedido || '')
-          const refInt = String(cab.codigo_pedido_integracao || '')
+          const refInt = String(cab.codigo_pedido_integracao || '').trim()
           if (codPedido) {
             if (vistosOmie[codPedido]) {
               duplicadosOficiais.push(codPedido) // pedido oficial repetido no lote — sinaliza
@@ -85,14 +90,20 @@ routerAdd(
             vistosOmie[codPedido] = true
           }
           if (refInt) {
-            // referência comprovada: canal → oficial
-            if (!vinculados[refInt]) vinculados[refInt] = { omie_id: codPedido, referencias: 0 }
-            vinculados[refInt].referencias++
-            if (vinculados[refInt].referencias > 1) conflitos[refInt] = true
+            if (amostraRefsOmie.length < 5)
+              amostraRefsOmie.push({ codigo_pedido: codPedido, codigo_pedido_integracao: refInt })
+            if (!vinculadosId[refInt]) vinculadosId[refInt] = { omie_id: codPedido, referencias: 0 }
+            vinculadosId[refInt].referencias++
+            if (vinculadosId[refInt].referencias > 1) conflitos[refInt] = true
+            if (!vinculadosNum[refInt])
+              vinculadosNum[refInt] = { omie_id: codPedido, referencias: 0 }
+            vinculadosNum[refInt].referencias++
           }
         }
       }
     } catch (_) {}
+    let amostraVinculados = [] // prova: pares canal → oficial (por referência comprovada)
+    let casamentoRef = 'nenhum' // 'pedido_origem_id' | 'numero_origem' | 'nenhum'
     for (const r of regs) {
       let it = {}
       try {
@@ -101,17 +112,35 @@ routerAdd(
       const status = String(it.status || '')
       const pagamento = String(it.pagamento || '')
       const pedidoId = String(it.pedido_id || '')
+      const numeroOrigem = String(it.numero || '')
       // (1) cancelado confirmado — precedência máxima
       if (status === 'cancelled') {
         contagem.cancelado++
         continue
       }
-      // (2)/(3) vínculo: SOMENTE referência comprovada no índice Omie
-      if (vinculados[pedidoId]) {
-        if (conflitos[pedidoId]) {
+      // (2)/(3) vínculo: SOMENTE referência comprovada, casamento EXATO com o valor gravado
+      let v = null
+      let via = ''
+      if (vinculadosId[pedidoId]) {
+        v = vinculadosId[pedidoId]
+        via = 'pedido_origem_id'
+      } else if (numeroOrigem && vinculadosNum[numeroOrigem]) {
+        v = vinculadosNum[numeroOrigem]
+        via = 'numero_origem'
+      }
+      if (v) {
+        casamentoRef = via
+        if (conflitos[v.omie_id] || v.referencias > 1) {
           contagem.conflito++ // referência múltipla: originais preservados, sem merge
         } else {
           contagem.vinculado_omie++ // vínculo único comprovado: conta UMA vez no oficial
+          if (amostraVinculados.length < 5)
+            amostraVinculados.push({
+              pedido_origem_id: pedidoId,
+              numero_origem: numeroOrigem,
+              omie_codigo_pedido: v.omie_id,
+              via,
+            })
         }
         continue
       }
@@ -143,13 +172,16 @@ routerAdd(
       nao_mapeados_por_estado: naoMapeados,
       amostra_pendente: amostraPendente,
       amostra_pago_sem_vinculo: amostraPago,
-      // CA-N3: prova de não-duplicação no consolidado
-      vinculados_com_referencia: Object.keys(vinculados).length,
+      // CA-N3: prova de não-duplicação no consolidado + amostras do vínculo comprovado
+      vinculados_com_referencia: Object.keys(vinculadosId).length,
+      casamento_referencia: casamentoRef,
+      amostra_vinculados: amostraVinculados,
+      amostra_referencias_omie: amostraRefsOmie,
       duplicados_oficiais: duplicadosOficiais.slice(0, 10),
       duplicados_oficiais_total: duplicadosOficiais.length,
       ultimo_sucesso: fonte.getString('ultimo_sucesso') || null,
       aviso:
-        'totais Nuvemshop são complementares e NÃO somados aos oficiais do Omie (vínculo desconhecido)',
+        'totais Nuvemshop são complementares e NÃO somados aos oficiais do Omie; vínculo somente por referência comprovada (codigo_pedido_integracao)',
     })
   },
   $apis.requireAuth(),
