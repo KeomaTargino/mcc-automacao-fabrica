@@ -1,7 +1,10 @@
-// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O1/O2/O3/O4
+// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002 CA-O3/O4
 // Uma página por etapa. Recebe APENAS execucao_id: fonte/recurso/cursor carregados do
-// registro no servidor (nunca do navegador). Rede fora de transação; persistência/ativação
-// em transação curta. Falha em qualquer página NÃO ativa o lote (CA-O3).
+// registro no servidor (nunca do navegador). Rede FORA da transação; persistência/ativação
+// em transação curta.
+// CA-O3: falha transitória (5xx/429/transporte) NÃO encerra a execução — permite até 3
+// tentativas em ETAPAS SEPARADAS (próxima chamada ≥2s depois), mantendo execução/cursor;
+// só a 3ª falha (ou erro de autenticação/dado) encerra, e o lote anterior permanece ativo.
 routerAdd(
   'POST',
   '/backend/v1/pcp/sync/pagina',
@@ -24,11 +27,14 @@ routerAdd(
       exec = $app.findRecordById('pcp_execucoes', execucaoId)
     } catch (_) {}
     if (!exec) return e.badRequestError('execucao_inexistente')
-    const estado = exec.getString('estado')
-    if (estado === 'concluida') {
+    const estadoExec = exec.getString('estado')
+    if (estadoExec === 'concluida') {
       return e.json(200, { ok: true, ja_concluida: true })
     }
-    if (estado !== 'em_andamento') {
+    if (estadoExec === 'falha') {
+      return e.badRequestError('execucao_em_falha')
+    }
+    if (estadoExec !== 'em_andamento') {
       return e.badRequestError('execucao_nao_andamento')
     }
     const recurso = exec.getString('recurso')
@@ -51,6 +57,10 @@ routerAdd(
       return e.forbiddenError('execucao_superada_ou_lease_expirado')
     }
 
+    // tentativas da página corrente (registradas em erro_codigo como retry_N)
+    const erroAnterior = exec.getString('erro_codigo') || ''
+    const tentativas = erroAnterior.indexOf('retry_') === 0 ? Number(erroAnterior.slice(6)) || 0 : 0
+
     // === Rede FORA da transação ===
     // Chamada real exige OMIE_APP_KEY/SECRET; sem secrets → modo mock de HOMOLOGAÇÃO
     // identificado (a SPEC proíbe declarar integração real sem credencial).
@@ -59,6 +69,7 @@ routerAdd(
     const paginaAtual = Number(exec.get('pagina') || 0) + 1
     let itens = []
     let erroRede = ''
+    let transitório = false
     let modo = 'mock'
     if (appKey && appSecret) {
       modo = 'real'
@@ -112,18 +123,23 @@ routerAdd(
           }
         } else if (res.statusCode === 401 || res.statusCode === 403) {
           erroRede = 'autenticacao_recusada' // sem retry (SPEC)
+        } else if (res.statusCode === 429 || res.statusCode >= 500) {
+          erroRede = 'falha_http_' + res.statusCode
+          transitório = true // retry em etapas separadas
         } else {
           erroRede = 'falha_http_' + res.statusCode
         }
       } catch (err) {
         erroRede = 'falha_transporte'
+        transitório = true
       }
     } else {
       // Mock de homologação: fixtures idênticas aos testes (identificado, nunca 'real').
       // Injeção de falha APENAS em homologação, via secret temporário (prova CA-O3).
-      const simFalha = $secrets.get('PCP_SIMULAR_FALHA_PG2')
-      if (simFalha === 'true' && paginaAtual === 2) {
+      const simPg = Number($secrets.get('PCP_SIMULAR_FALHA_PAGINA') || 0)
+      if (simPg === paginaAtual) {
         erroRede = 'falha_simulada_homolog'
+        transitório = true // injeção simula falha transitória (retry em etapa separada)
       } else if (paginaAtual === 1) {
         itens = [
           { produto_id: '123', local_id: '1', unidade: 'UN', saldo: 10 },
@@ -143,7 +159,29 @@ routerAdd(
     } catch (_) {}
     if (!lote) return e.badRequestError('lote_ausente')
     if (erroRede) {
-      // Falha: registra tentativa, NÃO ativa, mantém lote anterior ativo na fonte (CA-O3)
+      // Falha transitória com tentativas restantes: mantém execução/cursor, agenda retry
+      if (transitório && tentativas + 1 < 3) {
+        $app.runInTransaction((tx) => {
+          exec.set('erro_codigo', 'retry_' + (tentativas + 1))
+          exec.set(
+            'erro_mensagem',
+            'tentativa ' + (tentativas + 1) + ' da página ' + paginaAtual + ': ' + erroRede,
+          )
+          tx.save(exec)
+          fonte.set('ultima_tentativa', new Date().toISOString())
+          fonte.set('lease_ate', new Date(Date.now() + 5 * 60 * 1000).toISOString())
+          tx.save(fonte)
+        })
+        return e.json(200, {
+          ok: false,
+          retry: true,
+          tentativa: tentativas + 1,
+          erro: erroRede,
+          pagina: paginaAtual,
+          proxima_em_ms: tentativas + 1 === 1 ? 2000 : 5000,
+        })
+      }
+      // Falha final (3ª tentativa, autenticação ou erro não transitório): encerra SEM ativar
       $app.runInTransaction((tx) => {
         exec.set('estado', 'falha')
         exec.set('pagina', paginaAtual - 1)
@@ -156,7 +194,7 @@ routerAdd(
         fonte.set('ultima_tentativa', new Date().toISOString())
         tx.save(fonte)
       })
-      return e.json(200, { ok: false, erro: erroRede, pagina: paginaAtual })
+      return e.json(200, { ok: false, erro: erroRede, pagina: paginaAtual, encerrada: true })
     }
 
     $app.runInTransaction((tx) => {
@@ -184,6 +222,8 @@ routerAdd(
       }
       exec.set('pagina', paginaAtual)
       exec.set('cursor', String(paginaAtual))
+      exec.set('erro_codigo', '')
+      exec.set('erro_mensagem', '')
       tx.save(exec)
       fonte.set('ultima_tentativa', new Date().toISOString())
       fonte.set('lease_ate', new Date(Date.now() + 5 * 60 * 1000).toISOString()) // renova lease
