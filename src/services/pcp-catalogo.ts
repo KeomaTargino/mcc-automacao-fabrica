@@ -23,6 +23,15 @@ export interface RespostaCatalogo {
   pendencias?: string[]
 }
 
+export interface LinhaSaldo {
+  local_id: string
+  unidade: string
+  saldo: number | null
+  fisico: number | null
+  reservado: number | null
+  unidade_incompativel?: boolean
+}
+
 export interface DetalheCatalogo {
   disponivel: boolean
   motivo?: string
@@ -31,16 +40,11 @@ export interface DetalheCatalogo {
     disponivel: false
     motivo: string
   }
+  pendencias?: string[]
   saldo?: {
     disponivel: boolean
     motivo?: string
-    por_local?: Array<{
-      local_id: string
-      unidade: string
-      saldo: number | null
-      fisico: number | null
-      reservado: number | null
-    }>
+    por_local?: LinhaSaldo[]
   }
 }
 

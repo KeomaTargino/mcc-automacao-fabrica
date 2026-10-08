@@ -232,6 +232,18 @@ const Catalogo = () => {
                   ficha/receita não está exposto pela API autorizada do Omie; nada é inventado (sem
                   componentes, sem rendimento, sem conversão).
                 </div>
+                {detalhe.pendencias && detalhe.pendencias.length > 0 && (
+                  <div className="rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
+                    <p className="font-medium">
+                      Pendências deste item (nada é preenchido por padrão):
+                    </p>
+                    <ul className="mt-1 list-disc list-inside">
+                      {detalhe.pendencias.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {detalhe.saldo &&
                   (detalhe.saldo.disponivel ? (
                     <div>
@@ -250,7 +262,14 @@ const Catalogo = () => {
                           {(detalhe.saldo.por_local || []).map((l) => (
                             <tr key={l.local_id}>
                               <td className="py-1 font-mono text-xs">{l.local_id}</td>
-                              <td>{l.unidade}</td>
+                              <td>
+                                {l.unidade}
+                                {l.unidade_incompativel && (
+                                  <span className="ml-1 text-orange-700">
+                                    (incompatível com o cadastro — sem conversão)
+                                  </span>
+                                )}
+                              </td>
                               <td>{l.saldo}</td>
                               <td>{l.fisico}</td>
                               <td>{l.reservado}</td>

@@ -5,7 +5,9 @@
 // Regras da SPEC: produto identificado por produto_id (código igual NUNCA mescla — C1);
 // ficha sem contrato comprovado na conta → estado explícito 'ficha_indisponivel' (C3),
 // nunca receita vazia com zero; unidade ausente → 'unidade_ausente' (não preencher UN);
-// busca/paginação sem concatenar entrada em filtro (sem injeção).
+// CA-C3 (task ece1553b): diferenciar produto INATIVO de ausência de leitura, unidade
+// AUSENTE e unidade INCOMPATÍVEL entre cadastro e saldo — nunca converter nem somar
+// unidades distintas; consulta nunca altera o mestre.
 routerAdd(
   'GET',
   '/backend/v1/pcp/catalogo',
@@ -147,16 +149,31 @@ routerAdd(
     try {
       it = JSON.parse(rec.getString('conteudo') || '{}') || {}
     } catch (_) {}
+    const unidade = String(it.unidade || '')
+    const ativo = String(it.ativo || '')
     const produto = {
       produto_id: String(it.produto_id || ''),
       codigo: String(it.codigo || ''),
       descricao: String(it.descricao || ''),
-      unidade: String(it.unidade || ''),
-      ativo: String(it.ativo || ''),
+      unidade,
+      ativo,
       familia: String(it.familia || ''),
       origem_lote: loteAtivo,
       atualizado_em: fonte.getString('ultimo_sucesso') || null,
     }
+    // CA-C3: estados explícitos — inatividade ≠ ausência de leitura; unidade ausente
+    // impede cálculo/conversão daquele item; nada vira zero/default.
+    const pendencias = []
+    const inativo = ativo === 'N'
+    if (inativo)
+      pendencias.push(
+        'Produto INATIVO no cadastro do Omie (preservado no catálogo — inatividade não apaga histórico).',
+      )
+    const unidadeAusente = unidade === ''
+    if (unidadeAusente)
+      pendencias.push(
+        'Unidade AUSENTE no cadastro — conversão e cálculo ficam IMPEDIDOS para este item (nada é preenchido por padrão).',
+      )
     // C3: ficha sem contrato comprovado na conta → estado explícito, sem receita vazia.
     const ficha = { disponivel: false, motivo: 'ficha_indisponivel_sem_contrato' }
     // C4: saldo só com área estoque SEPARADA; nunca vaza por UI ou API só porque tem catálogo.
@@ -182,17 +199,21 @@ routerAdd(
           0,
           { l: loteEstoque, k: 'omie:estoque:app1:' + produtoId + ':' },
         )
+        // CA-C3: linha de saldo com unidade DIFERENTE da unidade do cadastro é sinalizada
+        // como incompatível — exibida como informada, SEM conversão e SEM soma entre unidades.
         const porLocal = regsEstoque.map((re) => {
           let ie = {}
           try {
             ie = JSON.parse(re.getString('conteudo') || '{}') || {}
           } catch (_) {}
+          const unLinha = String(ie.unidade || '')
           return {
             local_id: String(ie.local_id || ''),
-            unidade: String(ie.unidade || ''),
+            unidade: unLinha,
             saldo: ie.saldo !== undefined ? ie.saldo : null,
             fisico: ie.fisico !== undefined ? ie.fisico : null,
             reservado: ie.reservado !== undefined ? ie.reservado : null,
+            unidade_incompativel: Boolean(unidade && unLinha && unidade !== unLinha),
           }
         })
         saldo =
@@ -201,7 +222,7 @@ routerAdd(
             : { disponivel: false, motivo: 'sem_saldo_registrado' }
       }
     }
-    return e.json(200, { disponivel: true, produto, ficha, saldo })
+    return e.json(200, { disponivel: true, produto, ficha, saldo, pendencias })
   },
   $apis.requireAuth(),
 )
