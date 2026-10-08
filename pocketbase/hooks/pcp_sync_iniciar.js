@@ -1,4 +1,4 @@
-// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002/1-003
+// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002/1-003/1-004
 // Inicia execução de sincronização por fonte+recurso (allowlist de consulta).
 // Lease de 5 minutos + geração crescente; execução ativa devolvida em vez de duplicar.
 // Escrita em transação curta; nenhuma rede aqui.
@@ -20,7 +20,7 @@ routerAdd(
     const recurso = String(body.recurso || '')
     // Allowlist por fonte (só consulta; recursos reconciliados com a conta real)
     const ALLOW = {
-      omie: { estoque: true, pedidos: true }, // produtos: NÃO reconciliado (conta com 0 registros)
+      omie: { estoque: true, pedidos: true, produtos: true }, // produtos reconciliado na conta (cadastro vazio = lote vazio legítimo, SPEC-1-004)
       nuvemshop: { pedidos: true },
     }
     if (!ALLOW[fonteNome]) return e.badRequestError('fonte_desconhecida')
