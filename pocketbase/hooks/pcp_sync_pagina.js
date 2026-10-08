@@ -6,6 +6,8 @@
 // ListarProdutosResumido (produtos — SPEC-1-004; conta real com cadastro VAZIO = lote vazio
 // legítimo, não erro); rate-limit = HTTP 500 REDUNDANT com janela "Aguarde N segundos" no
 // corpo — SPEC manda respeitar a janela quando a fonte a informa.
+// Fim de leitura: metadatagem (nTotPaginas/total_de_paginas) OU página incompleta —
+// cadastro vazio (total_de_paginas=0) ativa lote vazio na 1ª página em vez de travar o laço.
 // NUVEMSHOP (CL-002): GET /v1/{store_id}/orders, auth "Authentication: <token>", User-Agent
 // obrigatório; paginação page/per_page (máx. 200); fim = arr.length < 200.
 // CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS; 401/403 encerra
@@ -116,6 +118,7 @@ routerAdd(
             erroRede = 'autenticacao_recusada'
           } else if (res.statusCode >= 200 && res.statusCode < 300) {
             const j = res.json
+            let tamPagina = 100
             if (recurso === 'estoque') {
               const arr = (j && j.produtos) || []
               itens = (Array.isArray(arr) ? arr : []).map((p) => ({
@@ -129,8 +132,10 @@ routerAdd(
                 codigo: String(p.cCodigo || ''),
                 descricao: String(p.cDescricao || ''),
               }))
+              tamPagina = 50
               const totPaginas = Number((j && j.nTotPaginas) || 0)
-              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+              // fim por metadatagem OU página incompleta (cadastro vazio não trava o laço)
+              metaFim = (totPaginas > 0 && paginaAtual >= totPaginas) || arr.length < tamPagina
             } else if (recurso === 'pedidos') {
               const arr = (j && j.pedido_venda_produto) || []
               itens = (Array.isArray(arr) ? arr : []).map((p) => {
@@ -150,7 +155,7 @@ routerAdd(
                 }
               })
               const totPaginas = Number((j && j.total_de_paginas) || 0)
-              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+              metaFim = (totPaginas > 0 && paginaAtual >= totPaginas) || arr.length < tamPagina
             } else if (recurso === 'produtos') {
               const arr = (j && j.produtos) || []
               itens = (Array.isArray(arr) ? arr : []).map((p) => ({
@@ -162,7 +167,7 @@ routerAdd(
                 familia: String(p.descricao_familia || p.codigo_familia || ''),
               }))
               const totPaginas = Number((j && j.total_de_paginas) || 0)
-              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+              metaFim = (totPaginas > 0 && paginaAtual >= totPaginas) || arr.length < tamPagina
             }
           } else {
             erroRede = 'falha_http_' + res.statusCode
