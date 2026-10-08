@@ -2,11 +2,11 @@
 // Conferência da integração com dados autorizados:
 // 1) reconcilia contagem do lote ativo com nTotRegistros do Omie (1 chamada real);
 // 2) valida credencial real: 401/403 → credencial_recusada (sem retry, sem falso sucesso);
-// 3) rate-limit/5xx/transporte → falha_transitorio com RETRY em ETAPAS SEPARADAS (2s/5s, máx. 3)
-//    — igual ao sync/pagina; a conferência só é registrada quando concluída (DEFECT-1 corrigido:
-//    antes a falha do Omie era registrada como resultado final, "queimando" a conferência);
+// 3) rate-limit/5xx/transporte → retry em ETAPAS SEPARADAS (2s/5s, máx. 3) — só registra
+//    resultado quando concluída (DEFECT-1);
 // 4) registra o resultado no lote ativo (campo conferencia) e devolve relatório.
-// Escrita em transação curta; rede fora de transação; sem segredo na resposta.
+// BUG-2 corrigido (log 17:27:11): JSON.parse('') devolve undefined em goja —
+// confAnterior.resultado explodia em lote novo sem conferência (400 genérico).
 routerAdd(
   'POST',
   '/backend/v1/pcp/conferir-fonte',
@@ -44,12 +44,13 @@ routerAdd(
     // Tentativas anteriores desta conferência (retry em etapas separadas)
     let confAnterior = {}
     try {
-      confAnterior = JSON.parse(lote.getString('conferencia') || '{}')
-    } catch (_) {}
+      confAnterior = JSON.parse(lote.getString('conferencia') || '{}') || {}
+    } catch (_) {
+      confAnterior = {}
+    }
+    const resultadoAnterior = String((confAnterior && confAnterior.resultado) || '')
     const tentativas =
-      String(confAnterior.resultado || '').indexOf('retry_') === 0
-        ? Number(String(confAnterior.resultado).slice(6)) || 0
-        : 0
+      resultadoAnterior.indexOf('retry_') === 0 ? Number(resultadoAnterior.slice(6)) || 0 : 0
 
     // === Rede FORA da transação: 1 chamada real de contagem ===
     const appKey = $secrets.get('OMIE_APP_KEY')
