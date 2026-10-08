@@ -1,5 +1,5 @@
-// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002 CA-O1/O2 + conferência a5b75aca
-// Inicia execução de sincronização por recurso (allowlist de consulta RECONCILIADA com a conta real).
+// pocketbase/hooks/pcp_sync_iniciar.js — SPEC-1-002/1-003
+// Inicia execução de sincronização por fonte+recurso (allowlist de consulta).
 // Lease de 5 minutos + geração crescente; execução ativa devolvida em vez de duplicar.
 // Escrita em transação curta; nenhuma rede aqui.
 routerAdd(
@@ -16,26 +16,15 @@ routerAdd(
       return e.forbiddenError('sem_permissao_tecnica')
     }
     const body = e.requestInfo().body
+    const fonteNome = String(body.fonte || 'omie')
     const recurso = String(body.recurso || '')
-    // Allowlist reconciliada com a conta real (2026-10-08):
-    // - estoque: ListarPosEstoque provado (1055 registros/22 páginas, campos nCodProd/cCodigo/...)
-    // - produtos: ListarProdutosResumido existe no catálogo, mas AMOSTRA VAZIA na conta
-    //   (0 registros) — sem amostra reconciliada, execução é recusada (recurso_nao_reconciliado).
+    // Allowlist por fonte (só consulta; recursos reconciliados com a conta real)
     const ALLOW = {
-      estoque: {
-        endpoint: 'https://app.omie.com.br/api/v1/estoque/consulta/',
-        call: 'ListarPosEstoque',
-        reconciliado: true,
-      },
-      produtos: {
-        endpoint: 'https://app.omie.com.br/api/v1/geral/produtos/',
-        call: 'ListarProdutosResumido',
-        reconciliado: false,
-      },
+      omie: { estoque: true }, // produtos: NÃO reconciliado (conta com 0 registros)
+      nuvemshop: { pedidos: true },
     }
-    const cfg = ALLOW[recurso]
-    if (!cfg) return e.badRequestError('recurso_desconhecido')
-    if (!cfg.reconciliado) return e.badRequestError('recurso_nao_reconciliado')
+    if (!ALLOW[fonteNome]) return e.badRequestError('fonte_desconhecida')
+    if (!ALLOW[fonteNome][recurso]) return e.badRequestError('recurso_nao_reconciliado')
 
     const agoraISO = new Date().toISOString()
     const leaseISO = new Date(Date.now() + 5 * 60 * 1000).toISOString()
@@ -46,21 +35,20 @@ routerAdd(
       try {
         fonte = tx.findFirstRecordByFilter(
           'pcp_fontes',
-          "fonte = 'omie' && recurso = {:r} && aplicativo_ref = 'app1'",
-          { r: recurso },
+          "fonte = {:f} && recurso = {:r} && aplicativo_ref = 'app1'",
+          { f: fonteNome, r: recurso },
         )
       } catch (_) {}
       if (!fonte) {
         const colFontes = tx.findCollectionByNameOrId('pcp_fontes')
         fonte = new Record(colFontes)
-        fonte.set('fonte', 'omie')
+        fonte.set('fonte', fonteNome)
         fonte.set('recurso', recurso)
         fonte.set('aplicativo_ref', 'app1')
         fonte.set('geracao', 0)
         fonte.set('estado_tecnico', 'nunca_executado')
         tx.save(fonte)
       }
-      // execução ativa com lease vigente? devolve a mesma
       const execAtivaId = fonte.getString('execucao_ativa')
       if (execAtivaId) {
         let leaseMs = 0
@@ -82,11 +70,10 @@ routerAdd(
           return
         }
       }
-      // nova execução (geração crescente) + lote staging + lease
       const geracao = Number(fonte.get('geracao') || 0) + 1
       const colExec = tx.findCollectionByNameOrId('pcp_execucoes')
       const exec = new Record(colExec)
-      exec.set('fonte', 'omie')
+      exec.set('fonte', fonteNome)
       exec.set('recurso', recurso)
       exec.set('aplicativo_ref', 'app1')
       exec.set('estado', 'em_andamento')
@@ -95,7 +82,7 @@ routerAdd(
       tx.save(exec)
       const colLotes = tx.findCollectionByNameOrId('pcp_lotes')
       const lote = new Record(colLotes)
-      lote.set('fonte', 'omie')
+      lote.set('fonte', fonteNome)
       lote.set('recurso', recurso)
       lote.set('aplicativo_ref', 'app1')
       lote.set('execucao', exec.id)

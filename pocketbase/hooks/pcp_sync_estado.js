@@ -1,8 +1,6 @@
-// pocketbase/hooks/pcp_sync_estado.js — SPEC-1-002 CA-O1/O2 + conferência a5b75aca
+// pocketbase/hooks/pcp_sync_estado.js — SPEC-1-002/1-003
 // Metadados por área: sem dado bruto, sem segredo. Mostra último sucesso, última tentativa,
-// lote ativo e estado técnico (indisponível ≠ zero; falha ≠ dado novo).
-// Conferência real (2026-10-08): amostra do lote ativo bate com o Omie (nTotRegistros) —
-// total_itens inclui conferencia: {esperado, conferido_em, resultado} quando já houve conferência.
+// lote ativo, conferência e estado técnico (indisponível ≠ zero; falha ≠ dado novo).
 routerAdd(
   'GET',
   '/backend/v1/pcp/sync/estado',
@@ -16,10 +14,16 @@ routerAdd(
     const areas = perfil && perfil.getBool('ativo') ? perfil.getStringSlice('areas') : []
     const podeSync = perfil && perfil.getBool('ativo') && perfil.getBool('pode_atualizar_fontes')
 
-    // Recursos visíveis por área: estoque→[estoque], produtos→[catalogo]; outros entram nas próximas tasks.
-    const mapaAreas = { estoque: 'estoque', produtos: 'catalogo' }
+    // Recursos visíveis por área: estoque→[estoque], pedidos→[pedidos]; catálogo entra na SPEC-1-004.
+    const mapaAreas = { estoque: 'estoque', pedidos: 'pedidos', produtos: 'catalogo' }
 
-    const todos = $app.findRecordsByFilter('pcp_fontes', "fonte = 'omie'", 'recurso', 50, 0)
+    const todos = $app.findRecordsByFilter(
+      'pcp_fontes',
+      "aplicativo_ref = 'app1'",
+      'fonte,recurso',
+      50,
+      0,
+    )
     const fontes = []
     for (const f of todos) {
       const recurso = f.getString('recurso')
@@ -32,11 +36,10 @@ routerAdd(
         try {
           const lote = $app.findRecordById('pcp_lotes', loteAtivo)
           totalItens = Number(lote.get('total_itens') || 0)
-          // conferência registrada no lote ativo (gravada pela rota de conferência)
-          const confStr = lote.getString('conferencia') || ''
-          if (confStr) {
+          const conf = lote.getString('conferencia') || ''
+          if (conf) {
             try {
-              conferencia = JSON.parse(confStr)
+              conferencia = JSON.parse(conf)
             } catch (_) {
               conferencia = null
             }
@@ -44,15 +47,16 @@ routerAdd(
         } catch (_) {}
       }
       fontes.push({
+        fonte: f.getString('fonte'),
         recurso,
         estado_tecnico: f.getString('estado_tecnico'),
         geracao: Number(f.get('geracao') || 0),
         lote_ativo: loteAtivo,
         total_itens: totalItens,
+        conferencia,
         ultima_tentativa: f.getString('ultima_tentativa') || null,
         ultimo_sucesso: f.getString('ultimo_sucesso') || null,
         em_andamento: Boolean(f.getString('execucao_ativa')),
-        conferencia,
       })
     }
     return e.json(200, { pode_atualizar_fontes: podeSync, fontes })
