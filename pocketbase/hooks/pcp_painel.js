@@ -3,13 +3,15 @@
 // (pcp_fontes/pcp_lotes/pcp_dados) — sem nova integração, sem acesso do navegador a
 // coleção bruta ou segredo. Área 'painel' autoriza abrir a tela; CADA BLOCO exige
 // separadamente a sua área (gestão não obtém tudo por padrão — CA-P4).
-// Por bloco devolve: autorizado, disponível/motivo, fonte/recurso/lote/ultimo_sucesso/
-// estado_tecnico, resumo e itens (com filtros) e pendências — distinguindo ZERO VÁLIDO de
-// INDISPONÍVEL de LOTE ANTIGO (CA-P3). Nenhuma soma entre unidades distintas; saldo
-// indisponível não é zero; produção/compras sem fonte na Fase 1 → bloqueado explícito
-// (nunca "integrado"). Filtros validados no servidor (intervalo invertido = erro de campo).
-// BUG-3 (log 20:52): goja NÃO suporta object spread ({...x, campo}) — ReferenceError
-// __spreadValues; objetos construídos explicitamente em cada ramo (AP-2026-10-08-2052).
+// CA-P3 (task ca5ece04): falha/sem acesso/sem dado permanece EXPLÍCITA — quando o
+// estado_tecnico da fonte não é 'ok', o bloco avisa "última tentativa falhou; exibindo
+// dado do último sucesso (horário)" (lote antigo nunca apresentado como recém-atualizado);
+// zero só aparece quando há lote ativo com leitura válida (0 legítimo ≠ indisponível);
+// saldo indisponível não é zero (null ≠ zero).
+// CA-P4: bloco sem área devolve só {autorizado:false} — sem linhas, contagem ou pistas;
+// conteúdo externo é texto (a UI renderiza via JSX escapado, sem HTML arbitrário).
+// BUG-3 (log 20:52): goja NÃO suporta object spread ({...x, campo}) — construção
+// explícita de objetos em cada ramo (AP-2026-10-08-2052).
 // Vínculo do canal: MESMA prova da visão SPEC-1-003 — codigo_pedido_integracao casado com
 // pedido_id OU numero_origem (amostra provou o casamento por numero_origem); referência
 // múltipla → conflito, sem mesclar.
@@ -51,6 +53,20 @@ routerAdd(
 
     const temArea = function (a) {
       return areas.indexOf(a) !== -1
+    }
+
+    // helper: pendência de lote antigo após erro (CA-P3)
+    const pendenciaLoteAntigo = function (meta) {
+      if (meta && meta.estado_tecnico && meta.estado_tecnico !== 'ok') {
+        return (
+          'Última tentativa de atualização FALHOU (estado: ' +
+          meta.estado_tecnico +
+          ') — exibindo dado do último sucesso (' +
+          (meta.ultimo_sucesso || '—') +
+          '); dado pode estar desatualizado.'
+        )
+      }
+      return ''
     }
 
     // helper: metadados de um fonte/recurso (lote ativo, último sucesso, estado técnico)
@@ -156,6 +172,8 @@ routerAdd(
           })
         }
         const pend = []
+        const avisoAntigo = pendenciaLoteAntigo(meta)
+        if (avisoAntigo) pend.push(avisoAntigo)
         if (saldoAusente > 0)
           pend.push(saldoAusente + ' linha(s) com saldo ausente na fonte (null ≠ zero).')
         estoque = {
@@ -230,7 +248,6 @@ routerAdd(
         }
       }
       // canal: índice de vínculo por referência comprovada (SPEC-1-003)
-      // casamento por pedido_id OU numero_origem (amostra da conta provou numero_origem)
       const vinculadosId = {}
       const vinculadosNum = {}
       for (var iv = 0; iv < oficiaisArr.length; iv++) {
@@ -276,9 +293,8 @@ routerAdd(
           continue
         }
         if (vRef > 0) {
-          if (vRef > 1)
-            classes.conflito++ // referência múltipla: originais preservados
-          else classes.vinculado_omie++ // vínculo único comprovado: conta UMA vez
+          if (vRef > 1) classes.conflito++
+          else classes.vinculado_omie++
           continue
         }
         if (pagamento === 'paid') {
@@ -297,6 +313,9 @@ routerAdd(
       if (!metaNs || !metaNs.lote_ativo) pendPed.push('Lote do canal Nuvemshop ausente.')
       let oficiaisBloco = null
       if (metaOmie && metaOmie.lote_ativo) {
+        const pendOf = []
+        const avisoOf = pendenciaLoteAntigo(metaOmie)
+        if (avisoOf) pendOf.push(avisoOf)
         oficiaisBloco = {
           disponivel: true,
           fonte: 'omie',
@@ -306,6 +325,7 @@ routerAdd(
           estado_tecnico: metaOmie.estado_tecnico,
           total_por_id_unico: oficiaisUnicos,
           por_etapa: etapas,
+          pendencias: pendOf,
           nota: 'contagem por ID único (código do pedido), não por linhas de item',
         }
       } else {
@@ -318,6 +338,9 @@ routerAdd(
       }
       let complementaresBloco = null
       if (metaNs && metaNs.lote_ativo) {
+        const pendCp = []
+        const avisoCp = pendenciaLoteAntigo(metaNs)
+        if (avisoCp) pendCp.push(avisoCp)
         complementaresBloco = {
           disponivel: true,
           fonte: 'nuvemshop',
@@ -326,6 +349,7 @@ routerAdd(
           ultimo_sucesso: metaNs.ultimo_sucesso,
           estado_tecnico: metaNs.estado_tecnico,
           contagem: classes,
+          pendencias: pendCp,
           aviso: 'intenção de compra NÃO soma ao oficial; vínculo comprovado conta UMA vez',
         }
       } else {
