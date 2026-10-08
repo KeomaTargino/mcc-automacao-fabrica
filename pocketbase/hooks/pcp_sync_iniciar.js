@@ -20,7 +20,7 @@ routerAdd(
     const recurso = String(body.recurso || '')
     // Allowlist por fonte (só consulta; recursos reconciliados com a conta real)
     const ALLOW = {
-      omie: { estoque: true }, // produtos: NÃO reconciliado (conta com 0 registros)
+      omie: { estoque: true, pedidos: true }, // produtos: NÃO reconciliado (conta com 0 registros)
       nuvemshop: { pedidos: true },
     }
     if (!ALLOW[fonteNome]) return e.badRequestError('fonte_desconhecida')

@@ -2,12 +2,10 @@
 // Uma página por etapa. Recebe APENAS execucao_id: fonte/recurso/cursor carregados do
 // registro no servidor (nunca do navegador). Rede FORA da transação; persistência/ativação
 // em transação curta.
-// OMIE (CL-001): ListarPosEstoque, fim por nTotPaginas, campos nCodProd/cCodigo/cDescricao/
-// nSaldo/fisico/reservado; rate-limit = HTTP 500 REDUNDANT (transitório).
-// NUVEMSHOP (CL-002): GET /v1/{store_id}/orders, auth header "Authentication: <token>",
-// User-Agent obrigatório; paginação page/per_page (máx. 200); campos id/number/status/
-// payment_status/created_at/updated_at/products[] com product_id/variant_id/quantity/price;
-// rate-limit x-rate-limit-remaining (40/min). Conta real: 3343 pedidos (17 páginas de 200).
+// OMIE (CL-001): ListarPosEstoque (estoque) + ListarPedidos (pedidos — CA-N3 precisa do
+// lote oficial com codigo_pedido_integracao); rate-limit = HTTP 500 REDUNDANT (transitório).
+// NUVEMSHOP (CL-002): GET /v1/{store_id}/orders, auth "Authentication: <token>", User-Agent
+// obrigatório; paginação page/per_page (máx. 200); fim = arr.length < 200.
 // CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS (2s/5s); 401/403 encerra
 // na primeira; lote anterior permanece ativo.
 routerAdd(
@@ -85,6 +83,11 @@ routerAdd(
               { nPagina: paginaAtual, nRegPorPagina: 50, dDataPosicao: '', cExibeTodos: 'S' },
             ],
           },
+          pedidos: {
+            endpoint: 'https://app.omie.com.br/api/v1/produtos/pedido/',
+            call: 'ListarPedidos',
+            param: () => [{ pagina: paginaAtual, registros_por_pagina: 100 }],
+          },
         }
         const cfg = ALLOW[recurso]
         if (!cfg) return e.badRequestError('recurso_nao_reconciliado')
@@ -105,20 +108,42 @@ routerAdd(
             erroRede = 'autenticacao_recusada'
           } else if (res.statusCode >= 200 && res.statusCode < 300) {
             const j = res.json
-            const arr = (j && j.produtos) || []
-            itens = (Array.isArray(arr) ? arr : []).map((p) => ({
-              produto_id: String(p.nCodProd || ''),
-              local_id: String(p.codigo_local_estoque || ''),
-              unidade: 'UN',
-              saldo: p.nSaldo !== undefined && p.nSaldo !== null ? Number(p.nSaldo) : null,
-              fisico: p.fisico !== undefined && p.fisico !== null ? Number(p.fisico) : null,
-              reservado:
-                p.reservado !== undefined && p.reservado !== null ? Number(p.reservado) : null,
-              codigo: String(p.cCodigo || ''),
-              descricao: String(p.cDescricao || ''),
-            }))
-            const totPaginas = Number((j && j.nTotPaginas) || 0)
-            metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+            if (recurso === 'estoque') {
+              const arr = (j && j.produtos) || []
+              itens = (Array.isArray(arr) ? arr : []).map((p) => ({
+                produto_id: String(p.nCodProd || ''),
+                local_id: String(p.codigo_local_estoque || ''),
+                unidade: 'UN',
+                saldo: p.nSaldo !== undefined && p.nSaldo !== null ? Number(p.nSaldo) : null,
+                fisico: p.fisico !== undefined && p.fisico !== null ? Number(p.fisico) : null,
+                reservado:
+                  p.reservado !== undefined && p.reservado !== null ? Number(p.reservado) : null,
+                codigo: String(p.cCodigo || ''),
+                descricao: String(p.cDescricao || ''),
+              }))
+              const totPaginas = Number((j && j.nTotPaginas) || 0)
+              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+            } else if (recurso === 'pedidos') {
+              const arr = (j && j.pedido_venda_produto) || []
+              itens = (Array.isArray(arr) ? arr : []).map((p) => {
+                const cab = (p && p.cabecalho) || {}
+                return {
+                  cabecalho: {
+                    codigo_pedido:
+                      cab.codigo_pedido !== undefined && cab.codigo_pedido !== null
+                        ? String(cab.codigo_pedido)
+                        : '',
+                    codigo_pedido_integracao: String(cab.codigo_pedido_integracao || ''),
+                    numero_pedido: String(cab.numero_pedido || ''),
+                    origem_pedido: String(cab.origem_pedido || ''),
+                    etapa: String(cab.etapa || ''),
+                    data_previsao: String(cab.data_previsao || ''),
+                  },
+                }
+              })
+              const totPaginas = Number((j && j.total_de_paginas) || 0)
+              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+            }
           } else {
             erroRede = 'falha_http_' + res.statusCode
             transitorio = res.statusCode === 429 || res.statusCode >= 500
@@ -169,7 +194,6 @@ routerAdd(
                 preco: p.price !== undefined && p.price !== null ? Number(p.price) : null,
               })),
             }))
-            // fim da fonte: página devolve menos que per_page (a Nuvemshop não expõe total)
             metaFim = arr.length < 200
           } else {
             erroRede = 'falha_http_' + res.statusCode
@@ -230,14 +254,16 @@ routerAdd(
 
     $app.runInTransaction((tx) => {
       for (const it of itens) {
-        const chave =
-          fonteNome +
-          ':' +
-          recurso +
-          ':app1:' +
-          (fonteNome === 'omie'
-            ? [it.produto_id, it.local_id, it.unidade].join(':')
-            : [it.pedido_id].join(':'))
+        let chave = ''
+        if (fonteNome === 'omie') {
+          if (recurso === 'estoque') {
+            chave = 'omie:estoque:app1:' + it.produto_id + ':' + it.local_id + ':' + it.unidade
+          } else {
+            chave = 'omie:pedidos:app1:' + it.cabecalho.codigo_pedido
+          }
+        } else {
+          chave = 'nuvemshop:pedidos:app1:' + it.pedido_id
+        }
         let rec = null
         try {
           rec = tx.findFirstRecordByFilter('pcp_dados', 'lote = {:l} && chave_origem = {:k}', {
@@ -282,7 +308,7 @@ routerAdd(
           anterior.set('estado', 'substituido')
           tx.save(anterior)
         }
-        const doLote = tx.findRecordsByFilter('pcp_dados', 'lote = {:l}', '', 10000, 0, {
+        const doLote = tx.findRecordsByFilter('pcp_dados', 'lote = {:l}', '', 20000, 0, {
           l: lote.id,
         })
         lote.set('estado', 'completo')
