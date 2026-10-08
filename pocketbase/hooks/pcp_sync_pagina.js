@@ -1,10 +1,11 @@
-// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002/1-003 (reconciliado com as contas reais)
+// pocketbase/hooks/pcp_sync_pagina.js — SPEC-1-002/1-003/1-004 (reconciliado com as contas reais)
 // Uma página por etapa. Recebe APENAS execucao_id: fonte/recurso/cursor carregados do
 // registro no servidor (nunca do navegador). Rede FORA da transação; persistência/ativação
 // em transação curta.
-// OMIE (CL-001): ListarPosEstoque (estoque) + ListarPedidos (pedidos — CA-N3 precisa do
-// lote oficial com codigo_pedido_integracao); rate-limit = HTTP 500 REDUNDANT com janela
-// "Aguarde N segundos" no corpo — SPEC manda respeitar a janela quando a fonte a informa.
+// OMIE (CL-001): ListarPosEstoque (estoque) + ListarPedidos (pedidos — CA-N3) +
+// ListarProdutosResumido (produtos — SPEC-1-004; conta real com cadastro VAZIO = lote vazio
+// legítimo, não erro); rate-limit = HTTP 500 REDUNDANT com janela "Aguarde N segundos" no
+// corpo — SPEC manda respeitar a janela quando a fonte a informa.
 // NUVEMSHOP (CL-002): GET /v1/{store_id}/orders, auth "Authentication: <token>", User-Agent
 // obrigatório; paginação page/per_page (máx. 200); fim = arr.length < 200.
 // CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS; 401/403 encerra
@@ -90,6 +91,11 @@ routerAdd(
             call: 'ListarPedidos',
             param: () => [{ pagina: paginaAtual, registros_por_pagina: 100 }],
           },
+          produtos: {
+            endpoint: 'https://app.omie.com.br/api/v1/geral/produtos/',
+            call: 'ListarProdutosResumido',
+            param: () => [{ pagina: paginaAtual, registros_por_pagina: 100 }],
+          },
         }
         const cfg = ALLOW[recurso]
         if (!cfg) return e.badRequestError('recurso_nao_reconciliado')
@@ -143,6 +149,18 @@ routerAdd(
                   },
                 }
               })
+              const totPaginas = Number((j && j.total_de_paginas) || 0)
+              metaFim = totPaginas > 0 && paginaAtual >= totPaginas
+            } else if (recurso === 'produtos') {
+              const arr = (j && j.produtos) || []
+              itens = (Array.isArray(arr) ? arr : []).map((p) => ({
+                produto_id: String(p.codigo_produto || ''),
+                codigo: String(p.codigo || ''),
+                descricao: String(p.descricao || ''),
+                unidade: String(p.unidade || ''),
+                ativo: String(p.inativo || 'N') === 'N' ? 'S' : 'N',
+                familia: String(p.descricao_familia || p.codigo_familia || ''),
+              }))
               const totPaginas = Number((j && j.total_de_paginas) || 0)
               metaFim = totPaginas > 0 && paginaAtual >= totPaginas
             }
@@ -265,8 +283,10 @@ routerAdd(
         if (fonteNome === 'omie') {
           if (recurso === 'estoque') {
             chave = 'omie:estoque:app1:' + it.produto_id + ':' + it.local_id + ':' + it.unidade
-          } else {
+          } else if (recurso === 'pedidos') {
             chave = 'omie:pedidos:app1:' + it.cabecalho.codigo_pedido
+          } else {
+            chave = 'omie:produtos:app1:' + it.produto_id
           }
         } else {
           chave = 'nuvemshop:pedidos:app1:' + it.pedido_id
