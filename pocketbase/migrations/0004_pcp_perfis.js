@@ -2,6 +2,8 @@
 // Coleção pcp_perfis (SPEC): 1 perfil por usuário, índice único, regras superuser-only.
 // Fecha também as 5 regras das coleções de dados de integração ("" → null = superuser),
 // impedindo leitura direta de dados brutos por usuários autenticados.
+// Nota: campos bool não usam required (false = zero-value é recusado pelo validador);
+// a segurança não depende disso — hooks e consultas filtram sempre por ativo = true.
 migrate(
   (app) => {
     // 1) Coleção de perfis — todas as cinco regras declaradas (null = superuser only)
@@ -22,7 +24,7 @@ migrate(
           cascadeDelete: true,
           maxSelect: 1,
         },
-        { name: 'ativo', type: 'bool', required: true },
+        { name: 'ativo', type: 'bool' },
         {
           name: 'areas',
           type: 'select',
