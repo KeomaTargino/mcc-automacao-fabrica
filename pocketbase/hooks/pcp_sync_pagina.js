@@ -3,10 +3,11 @@
 // registro no servidor (nunca do navegador). Rede FORA da transação; persistência/ativação
 // em transação curta.
 // OMIE (CL-001): ListarPosEstoque (estoque) + ListarPedidos (pedidos — CA-N3 precisa do
-// lote oficial com codigo_pedido_integracao); rate-limit = HTTP 500 REDUNDANT (transitório).
+// lote oficial com codigo_pedido_integracao); rate-limit = HTTP 500 REDUNDANT com janela
+// "Aguarde N segundos" no corpo — SPEC manda respeitar a janela quando a fonte a informa.
 // NUVEMSHOP (CL-002): GET /v1/{store_id}/orders, auth "Authentication: <token>", User-Agent
 // obrigatório; paginação page/per_page (máx. 200); fim = arr.length < 200.
-// CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS (2s/5s); 401/403 encerra
+// CA-O3: falha transitória → até 3 tentativas em ETAPAS SEPARADAS; 401/403 encerra
 // na primeira; lote anterior permanece ativo.
 routerAdd(
   'POST',
@@ -68,6 +69,7 @@ routerAdd(
     let itens = []
     let erroRede = ''
     let transitorio = false
+    let esperaMs = 0
     let metaFim = false
     const fonteNome = exec.getString('fonte')
 
@@ -147,6 +149,11 @@ routerAdd(
           } else {
             erroRede = 'falha_http_' + res.statusCode
             transitorio = res.statusCode === 429 || res.statusCode >= 500
+            // SPEC: respeitar janela quando a fonte a informa (Omie: "Aguarde N segundos" no corpo)
+            const aguarde = /Aguarde\s+(\d+)\s+segundos/.exec(
+              String((res.json && res.json.faultstring) || ''),
+            )
+            if (aguarde) esperaMs = Math.min(Number(aguarde[1]) + 5, 90) * 1000
           }
         } catch (err) {
           erroRede = 'falha_transporte'
@@ -234,7 +241,7 @@ routerAdd(
           tentativa: tentativas + 1,
           erro: erroRede,
           pagina: paginaAtual,
-          proxima_em_ms: tentativas + 1 === 1 ? 2000 : 5000,
+          proxima_em_ms: esperaMs || (tentativas + 1 === 1 ? 2000 : 5000),
         })
       }
       $app.runInTransaction((tx) => {
