@@ -7,6 +7,7 @@ import Index from './pages/Index'
 import Catalogo from './pages/Catalogo'
 import Painel from './pages/Painel'
 import Login from './pages/Login'
+import TrocarSenha from './pages/TrocarSenha'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
@@ -23,6 +24,7 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/trocar-senha" element={<TrocarSenha />} />
           <Route element={<Layout />}>
             <Route
               path="/"

@@ -1,15 +1,21 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { obterPerfil, type RespostaPerfil } from '@/services/pcp-access'
+import { obterPerfil, verificarPrimeiraSenha, type RespostaPerfil } from '@/services/pcp-access'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-type EstadoAcesso = 'carregando' | 'sem_perfil' | 'perfil_inativo' | 'sem_permissao' | 'autorizado'
+type EstadoAcesso =
+  | 'carregando'
+  | 'trocar_senha'
+  | 'sem_perfil'
+  | 'perfil_inativo'
+  | 'sem_permissao'
+  | 'autorizado'
 
 /**
- * Guarda de área (SPEC-1-001 CA-A2/A3): exige sessão válida e perfil com a área.
- * A decisão vem do servidor (rota /backend/v1/pcp/perfil) — nunca do navegador.
- * Sessão expirada/revogada (401) limpa o estado e pede login.
+ * Guarda de área (SPEC-1-001 CA-A2/A3) com troca obrigatória de senha (SPEC-2-000 49327a88):
+ * exige sessão válida e perfil com a área; contas com senha inicial não trocada vão para
+ * /trocar-senha antes de qualquer tela. A decisão vem do servidor (/backend/v1/pcp/perfil).
  */
 export default function ProtectedArea({ area, children }: { area: string; children: ReactNode }) {
   const { isAuthenticated, loading: authLoading, signOut } = useAuth()
@@ -18,9 +24,13 @@ export default function ProtectedArea({ area, children }: { area: string; childr
   useEffect(() => {
     if (!isAuthenticated) return
     let vivo = true
-    obterPerfil()
-      .then((r: RespostaPerfil) => {
+    Promise.all([obterPerfil(), verificarPrimeiraSenha().catch(() => null)])
+      .then(([r: RespostaPerfil, primeira]) => {
         if (!vivo) return
+        if (primeira && primeira.exige_troca) {
+          setEstado('trocar_senha')
+          return
+        }
         if (r.perfil && r.perfil.areas.includes(area)) setEstado('autorizado')
         else if (r.motivo === 'perfil_inativo') setEstado('perfil_inativo')
         else if (r.perfil) setEstado('sem_permissao')
@@ -39,6 +49,10 @@ export default function ProtectedArea({ area, children }: { area: string; childr
     }
   }, [isAuthenticated, area, signOut])
 
+  if (estado === 'trocar_senha') {
+    return <Navigate to="/trocar-senha" replace />
+  }
+
   if (authLoading || !isAuthenticated) {
     if (!authLoading && !isAuthenticated) return <Navigate to="/login" replace />
     return (
@@ -53,6 +67,7 @@ export default function ProtectedArea({ area, children }: { area: string; childr
   if (estado === 'autorizado') return <>{children}</>
 
   const mensagens: Record<Exclude<EstadoAcesso, 'carregando' | 'autorizado'>, string> = {
+    trocar_senha: 'Troque a senha inicial para continuar.',
     sem_perfil:
       'Acesso pendente — seu usuário ainda não possui perfil cadastrado. Fale com o responsável.',
     perfil_inativo: 'Acesso pendente — seu perfil está inativo. Fale com o responsável.',
