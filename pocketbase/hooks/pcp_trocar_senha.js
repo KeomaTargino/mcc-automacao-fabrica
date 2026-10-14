@@ -1,4 +1,4 @@
-// pocketbase/hooks/pcp_troca_senha_obrigatoria.js — SPEC-2-000 CA-A2/A3 (task 49327a88)
+// pocketbase/hooks/pcp_trocar_senha.js — SPEC-2-000 CA-A2/A3 (task 49327a88)
 // Troca OBRIGATORIA da senha inicial: valida a senha atual, grava a nova e marca trocada.
 // A senha inicial vem do secret (nunca transita por repo/chat); a nova nunca e registrada.
 routerAdd(
@@ -21,7 +21,6 @@ routerAdd(
     if (nova === atual) {
       return e.badRequestError('a nova senha deve ser diferente da atual')
     }
-    // valida a senha atual contra o hash real do PocketBase
     let valida = false
     try {
       valida = auth.validatePassword(atual)
