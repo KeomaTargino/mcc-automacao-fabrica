@@ -1,5 +1,6 @@
-// pocketbase/hooks/pcp_perfil.js — SPEC-2-000 CA-A2/A3 (task 49327a88)
-// Perfil do usuario autenticado, agora com acoes e pontos (matriz v1.2).
+// pocketbase/hooks/pcp_perfil_v2.js — SPEC-2-000 CA-A2/A3 (task 49327a88)
+// Perfil do usuario autenticado com acoes e pontos (matriz v1.2).
+// Recriado sob novo nome apos conflito de rota com o hook antigo (pcp_perfil_atual removido).
 // A area/acao/ponto NUNCA vem do navegador: o servidor le pcp_perfis.
 routerAdd(
   'GET',
