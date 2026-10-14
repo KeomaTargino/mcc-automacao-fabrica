@@ -25,15 +25,16 @@ export default function ProtectedArea({ area, children }: { area: string; childr
     if (!isAuthenticated) return
     let vivo = true
     Promise.all([obterPerfil(), verificarPrimeiraSenha().catch(() => null)])
-      .then(([r: RespostaPerfil, primeira]) => {
+      .then(([r, primeira]) => {
         if (!vivo) return
+        const perfilRes = r as RespostaPerfil
         if (primeira && primeira.exige_troca) {
           setEstado('trocar_senha')
           return
         }
-        if (r.perfil && r.perfil.areas.includes(area)) setEstado('autorizado')
-        else if (r.motivo === 'perfil_inativo') setEstado('perfil_inativo')
-        else if (r.perfil) setEstado('sem_permissao')
+        if (perfilRes.perfil && perfilRes.perfil.areas.includes(area)) setEstado('autorizado')
+        else if (perfilRes.motivo === 'perfil_inativo') setEstado('perfil_inativo')
+        else if (perfilRes.perfil) setEstado('sem_permissao')
         else setEstado('sem_perfil')
       })
       .catch((err: any) => {
