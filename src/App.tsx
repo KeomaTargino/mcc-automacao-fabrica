@@ -13,6 +13,7 @@ import Planejamento from './pages/Planejamento'
 import Apontamentos from './pages/Apontamentos'
 import Conferencias from './pages/Conferencias'
 import Sugestoes from './pages/Sugestoes'
+import Consolidacoes from './pages/Consolidacoes'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
@@ -93,6 +94,14 @@ const App = () => (
               element={
                 <ProtectedArea area="painel">
                   <Sugestoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/consolidacoes"
+              element={
+                <ProtectedArea area="painel">
+                  <Consolidacoes />
                 </ProtectedArea>
               }
             />
