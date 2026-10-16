@@ -19,6 +19,8 @@ import {
   type LinhaProgramacao,
   type OPDigital,
 } from '@/lib/pcp/planejamento'
+import { obterPerfil } from '@/services/pcp-access'
+import { useEffect } from 'react'
 
 const DIAS = ['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17']
 
@@ -49,13 +51,28 @@ const Planejamento = () => {
   const [dataDestino, setDataDestino] = useState(DIAS[4])
   const [motivoReprog, setMotivoReprog] = useState('')
   const [resultadoReprog, setResultadoReprog] = useState('')
+  // Task 16b8a592: ações REAIS do perfil logado (servidor decide); demo usa as
+  // ações do usuário apenas para os botões de demonstração.
+  const [acoesReais, setAcoesReais] = useState<string[]>([])
+  const [usuarioReal, setUsuarioReal] = useState('')
+
+  useEffect(() => {
+    obterPerfil()
+      .then((r: any) => {
+        setAcoesReais(r?.perfil?.acoes ?? [])
+        setUsuarioReal(r?.perfil?.usuario ?? '')
+      })
+      .catch(() => {
+        setAcoesReais([])
+      })
+  }, [])
 
   const reprogramar = () => {
     const r = reprogramarSaldo(
       opReprog,
       dataDestino,
       motivoReprog || 'reprogramação de demonstração',
-      { acoes: ['editar_programacao'], usuario: 'keoma.targino' },
+      { acoes: acoesReais, usuario: usuarioReal || 'demonstracao' },
       null,
       vinculos,
       opReprog.versao,
@@ -105,9 +122,11 @@ const Planejamento = () => {
   }
 
   const publicar = () => {
+    // Recorte da 16b8a592: a publicação usa as ações REAIS do perfil logado
+    // (servidor decide); sem a ação, o guard nega (403) e nada é publicado.
     const r = publicarProgramacao(
       { linhas, parametros: PARAMETROS_DEMO },
-      { acoes: ['publicar_programacao'], versao_esperada: 1 },
+      { acoes: acoesReais, versao_esperada: 1 },
       calendario,
       RECURSOS_DEMO,
       { versao_atual: 1 },
@@ -284,6 +303,13 @@ const Planejamento = () => {
           <Button onClick={publicar} disabled={linhas.length === 0}>
             Publicar programação (demonstração)
           </Button>
+          <p className="text-xs text-muted-foreground" role="note">
+            Ações do seu perfil (servidor):{' '}
+            {acoesReais.length > 0 ? acoesReais.join(', ') : 'carregando…'}.{' '}
+            {acoesReais.includes('publicar_programacao')
+              ? 'Você pode publicar.'
+              : 'Sem publicar_programacao, a publicação é negada (403) — comportamento correto.'}
+          </p>
         </CardContent>
       </Card>
 
