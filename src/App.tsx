@@ -9,6 +9,7 @@ import Painel from './pages/Painel'
 import Login from './pages/Login'
 import TrocarSenha from './pages/TrocarSenha'
 import Qualidade from './pages/Qualidade'
+import Planejamento from './pages/Planejamento'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
@@ -56,6 +57,14 @@ const App = () => (
               element={
                 <ProtectedArea area="painel">
                   <Qualidade />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/planejamento"
+              element={
+                <ProtectedArea area="planejamento">
+                  <Planejamento />
                 </ProtectedArea>
               }
             />
