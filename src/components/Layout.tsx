@@ -17,6 +17,11 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'conferir_expedicao', rotulo: 'Conferências', rota: '/conferencias' },
 ]
 
+// Demonstração (task 556da315, recorte sintético): permite visualizar /conferencias
+// com a conta atual sem ampliar acesso real — o botão "Conferir" permanece inativo
+// quando o perfil não tem a ação conferir_expedicao. Removido na task d77447ab (uso real).
+export const DEMO_CONFERENCIA = true
+
 export default function Layout() {
   const { user, isAuthenticated, signOut } = useAuth()
   const [areas, setAreas] = useState<string[] | null>(null)

@@ -15,6 +15,7 @@ import Conferencias from './pages/Conferencias'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
+import { DEMO_CONFERENCIA } from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -81,7 +82,7 @@ const App = () => (
             <Route
               path="/conferencias"
               element={
-                <ProtectedArea area="conferir_expedicao">
+                <ProtectedArea area={DEMO_CONFERENCIA ? 'painel' : 'conferir_expedicao'}>
                   <Conferencias />
                 </ProtectedArea>
               }

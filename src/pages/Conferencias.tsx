@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import {
   type EtapaConferencia,
   type PontoConferencia,
 } from '@/lib/pcp/conferencia'
+import { obterPerfil } from '@/services/pcp-access'
 
 const Conferencias = () => {
   const [registros, setRegistros] = useState<RegistroConferencia[]>([])
@@ -22,6 +23,16 @@ const Conferencias = () => {
   // Demonstração: produzido/encaixotados sintéticos (o real vem da OP publicada na task d77447ab)
   const [produzido] = useState(100)
   const [encaixotado] = useState(98)
+  const [podeConferir, setPodeConferir] = useState(false)
+
+  useEffect(() => {
+    obterPerfil()
+      .then((r: any) => {
+        const acoes: string[] = r?.perfil?.acoes ?? []
+        setPodeConferir(acoes.includes('conferir_expedicao'))
+      })
+      .catch(() => setPodeConferir(false))
+  }, [])
 
   const fila = useMemo(
     () => montarFila(OP_CONFERENCIA_DEMO, produzido, encaixotado, registros),
@@ -86,13 +97,28 @@ const Conferencias = () => {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => registrar('recebimento_expedicao')}>
+              <Button
+                size="sm"
+                onClick={() => registrar('recebimento_expedicao')}
+                disabled={!podeConferir}
+              >
                 Conferir expedição
               </Button>
-              <Button size="sm" variant="outline" onClick={() => registrar('entrada_camara')}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => registrar('entrada_camara')}
+                disabled={!podeConferir}
+              >
                 Conferir câmara
               </Button>
             </div>
+            {!podeConferir && (
+              <p className="text-xs text-amber-700" role="note">
+                Modo visualização: seu perfil não tem a ação conferir_expedicao (conforme a matriz
+                de acesso). Na conferência real, quem conferi é Angela, Cristiano ou Kevin.
+              </p>
+            )}
             <label className="block space-y-1">
               <span className="text-muted-foreground">Quantidade conferida (UN)</span>
               <Input
