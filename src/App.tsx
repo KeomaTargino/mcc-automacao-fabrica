@@ -10,6 +10,7 @@ import Login from './pages/Login'
 import TrocarSenha from './pages/TrocarSenha'
 import Qualidade from './pages/Qualidade'
 import Planejamento from './pages/Planejamento'
+import Apontamentos from './pages/Apontamentos'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
@@ -65,6 +66,14 @@ const App = () => (
               element={
                 <ProtectedArea area="planejamento">
                   <Planejamento />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/apontamentos"
+              element={
+                <ProtectedArea area="apontar_producao">
+                  <Apontamentos />
                 </ProtectedArea>
               }
             />
