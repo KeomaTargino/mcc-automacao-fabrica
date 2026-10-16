@@ -144,6 +144,13 @@ export function enviarComAquisicao(
       motivo: `Envio negado: transação em estado ${t.estado} — só autorizada envia (O3).`,
     }
   }
+  if (t.payload_hash !== null && JSON.stringify(payload) !== t.payload_hash) {
+    return {
+      estado: 'negado',
+      motivo:
+        'Envio negado: payload divergente do hash aprovado (O2/T1) — aprovação invalidada; zero POST.',
+    }
+  }
   if (!temLease) {
     return {
       estado: 'negado',
