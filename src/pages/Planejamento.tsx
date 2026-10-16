@@ -4,6 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  reprogramarSaldo,
+  demandaExecutavel,
+  type OP,
+  type VinculoReprogramacao,
+} from '@/lib/pcp/reprogramacao'
+import {
   criarCalendario,
   RECURSOS_DEMO,
   PARAMETROS_DEMO,
@@ -25,6 +31,45 @@ const Planejamento = () => {
   const [recurso, setRecurso] = useState('cookies')
   const [op, setOp] = useState<OPDigital | null>(null)
   const [resultado, setResultado] = useState<string>('')
+  // Demonstração da reprogramação parcial (task 87e4af63, oráculo T4): OP 100 com
+  // realizado 40 e saldo executável 60; transferir para outro dia preserva o passado.
+  const [opReprog, setOpReprog] = useState<OP>({
+    op_id: 'OP-S-2-002',
+    versao: 1,
+    produto: 'COOKIE-1',
+    unidade: 'UN',
+    quantidade_planejada: 100,
+    realizado: 40,
+    saldo_executavel: 60,
+    recurso: 'cookies',
+    data: DIAS[0],
+    estado: 'em_execucao',
+  })
+  const [vinculos, setVinculos] = useState<VinculoReprogramacao[]>([])
+  const [dataDestino, setDataDestino] = useState(DIAS[4])
+  const [motivoReprog, setMotivoReprog] = useState('')
+  const [resultadoReprog, setResultadoReprog] = useState('')
+
+  const reprogramar = () => {
+    const r = reprogramarSaldo(
+      opReprog,
+      dataDestino,
+      motivoReprog || 'reprogramação de demonstração',
+      { acoes: ['editar_programacao'], usuario: 'keoma.targino' },
+      null,
+      vinculos,
+      opReprog.versao,
+    )
+    if (r.estado === 'transferido' && r.origem && r.destino && r.vinculo) {
+      setOpReprog(r.origem)
+      setVinculos([...vinculos, r.vinculo])
+      setResultadoReprog(r.motivo ?? '')
+    } else if (r.estado === 'replay') {
+      setResultadoReprog('Replay: transferência já existente — nada duplicado.')
+    } else {
+      setResultadoReprog(`${r.estado}: ${r.motivo}`)
+    }
+  }
 
   const validacao = useMemo(
     () => validarRascunho({ linhas, parametros: PARAMETROS_DEMO }, calendario, RECURSOS_DEMO),
@@ -239,6 +284,81 @@ const Planejamento = () => {
           <Button onClick={publicar} disabled={linhas.length === 0}>
             Publicar programação (demonstração)
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between gap-2">
+            <span>Reprogramação parcial (demonstração — oráculo T4)</span>
+            <Badge variant="outline">Demanda executável: {demandaExecutavel([opReprog])}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-3">
+          <p className="text-muted-foreground">
+            OP {opReprog.op_id} v{opReprog.versao}: planejado {opReprog.quantidade_planejada}{' '}
+            {opReprog.unidade}, realizado {opReprog.realizado}, saldo executável{' '}
+            {opReprog.saldo_executavel}, estado {opReprog.estado}. Transferir o saldo não iniciado
+            preserva o passado (realizado e histórico ficam na origem).
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1">
+              <span className="text-muted-foreground">Data de destino</span>
+              <select
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={dataDestino}
+                onChange={(e) => setDataDestino(e.target.value)}
+              >
+                {DIAS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-muted-foreground">Motivo (obrigatório)</span>
+              <Input
+                value={motivoReprog}
+                onChange={(e) => setMotivoReprog(e.target.value)}
+                placeholder="Ex.: recurso indisponível no dia"
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={reprogramar} disabled={opReprog.saldo_executavel <= 0}>
+              Transferir saldo ({opReprog.saldo_executavel} {opReprog.unidade})
+            </Button>
+          </div>
+          {resultadoReprog && (
+            <div className="rounded-md border px-3 py-2 text-xs bg-muted" role="status">
+              {resultadoReprog}
+            </div>
+          )}
+          {vinculos.length > 0 && (
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="pb-2">Origem</th>
+                  <th className="pb-2">Destino</th>
+                  <th className="pb-2">Transferido</th>
+                  <th className="pb-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vinculos.map((v, i) => (
+                  <tr key={i}>
+                    <td className="py-1 font-mono text-xs">{v.origem_op}</td>
+                    <td className="font-mono text-xs">{v.destino_op}</td>
+                    <td>
+                      {v.quantidade_transferida} {opReprog.unidade}
+                    </td>
+                    <td className="text-xs text-muted-foreground">{v.motivo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
 
