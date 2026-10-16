@@ -13,6 +13,12 @@ import {
   type Sugestao,
   type EntradasProducao,
 } from '@/lib/pcp/sugestao'
+import {
+  aceitarSugestao,
+  publicarRascunho,
+  type SugestaoAceitavel,
+  type Rascunho,
+} from '@/lib/pcp/rascunho'
 
 const CASOS: { rotulo: string; calcular: () => Sugestao }[] = [
   {
@@ -55,8 +61,43 @@ const CASOS: { rotulo: string; calcular: () => Sugestao }[] = [
 
 const Sugestoes = () => {
   const [aberta, setAberta] = useState<string | null>(null)
+  const [rascunhos, setRascunhos] = useState<Rascunho[]>([])
+  const [msgAceitar, setMsgAceitar] = useState('')
   const sugestoes = useMemo(() => CASOS.map((c) => ({ rotulo: c.rotulo, s: c.calcular() })), [])
   const abertaObj = sugestoes.find((x) => x.s.id === aberta)
+
+  const aceitar = (s: Sugestao) => {
+    if (s.estado !== 'calculada' || s.quantidade === null) {
+      setMsgAceitar('Sugestão bloqueada não pode ser aceita.')
+      return
+    }
+    const aceitavel: SugestaoAceitavel = {
+      id: s.id,
+      tipo: s.tipo,
+      item: s.item,
+      unidade: s.unidade,
+      quantidade: s.quantidade,
+      hash_conteudo: JSON.stringify([s.tipo, s.item, s.quantidade, s.unidade]),
+      versao_parametros: s.memoria.versao_parametros,
+      estado: s.estado,
+    }
+    // Demonstração: conta do owner (Keoma) tem editar_programacao na matriz v1.2.
+    const r = aceitarSugestao(
+      aceitavel,
+      { acoes: ['editar_programacao'], usuario: 'keoma.targino' },
+      rascunhos,
+    )
+    if (r.estado === 'rascunho_criado') {
+      setRascunhos([...rascunhos, r.rascunho])
+      setMsgAceitar(
+        `Rascunho criado: ${r.rascunho.item} ${r.rascunho.quantidade} ${r.rascunho.unidade} — NÃO publica e NÃO envia compra.`,
+      )
+    } else if (r.estado === 'replay') {
+      setMsgAceitar('Repetição ignorada: rascunho já existia (idempotência).')
+    } else {
+      setMsgAceitar(`${r.estado}: ${r.motivo}`)
+    }
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -144,6 +185,48 @@ const Sugestoes = () => {
         <p className="mt-4 text-xs text-muted-foreground">
           Memória reproduzível: mesmas entradas → mesmos passos (determinismo provado no TDD).
         </p>
+      )}
+
+      {msgAceitar && (
+        <div className="mt-4 rounded-md border px-3 py-2 text-xs bg-muted" role="status">
+          {msgAceitar}
+        </div>
+      )}
+
+      {rascunhos.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Rascunhos criados ({rascunhos.length}) — nenhum publicado, nenhuma compra enviada
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="pb-2">Sugestão</th>
+                  <th className="pb-2">Item</th>
+                  <th className="pb-2">Qtd</th>
+                  <th className="pb-2">Publicado</th>
+                  <th className="pb-2">Compra enviada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rascunhos.map((r) => (
+                  <tr key={r.rascunho_id}>
+                    <td className="py-1 font-mono text-xs">{r.sugestao_id}</td>
+                    <td>{r.item}</td>
+                    <td>
+                      {r.quantidade} {r.unidade}
+                    </td>
+                    <td>não (gate mantido)</td>
+                    <td>não (gate mantido)</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
