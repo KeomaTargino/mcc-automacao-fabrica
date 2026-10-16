@@ -14,6 +14,12 @@ import {
   type PontoConferencia,
 } from '@/lib/pcp/conferencia'
 import { obterPerfil } from '@/services/pcp-access'
+import {
+  aprovarConsolidacao,
+  invalidarPorNovaProjecao,
+  retificarAntesDaAquisicao,
+  type AprovacaoConsolidacao,
+} from '@/lib/pcp/revisao-consolidacao'
 
 const Conferencias = () => {
   const [registros, setRegistros] = useState<RegistroConferencia[]>([])
@@ -24,6 +30,51 @@ const Conferencias = () => {
   const [produzido] = useState(100)
   const [encaixotado] = useState(98)
   const [podeConferir, setPodeConferir] = useState(false)
+  const [aprovacao, setAprovacao] = useState<AprovacaoConsolidacao | null>(null)
+  const [qtdFinal, setQtdFinal] = useState('96')
+  const [motivoAprov, setMotivoAprov] = useState('')
+  const [msgAprov, setMsgAprov] = useState('')
+
+  const aprovar = () => {
+    const q = Number(qtdFinal)
+    const r = aprovarConsolidacao(
+      {
+        aprovacao_id: `AP-${OP_CONFERENCIA_DEMO.op_id}-${OP_CONFERENCIA_DEMO.versao_op}`,
+        op_id: OP_CONFERENCIA_DEMO.op_id,
+        versao_op: OP_CONFERENCIA_DEMO.versao_op,
+        quantidade_final: q,
+        motivo: motivoAprov || 'revisão do PCP (demonstração)',
+        aprovador: 'keoma.targino',
+        hash_eventos: 'demo-eventos',
+        hash_conferencias: 'demo-conferencias-' + registros.length,
+      },
+      { acoes: ['aprovar_consolidacao'], usuario: 'keoma.targino' },
+      { estado: fila.estado === 'revisavel' ? 'revisavel' : 'bloqueada' },
+    )
+    if (r.estado === 'autorizada') {
+      setAprovacao(r.aprovacao)
+      const p = (r.aprovacao as any).pendencias
+      setMsgAprov(
+        `Aprovação registrada: final ${r.aprovacao.quantidade_final} UN com hashes.` +
+          (Array.isArray(p) && p.length > 0
+            ? ` PENDÊNCIA: ${p[0]}`
+            : ' Liberada para revisão/envio (gate da SPEC-2-005).'),
+      )
+    } else {
+      setMsgAprov(`${r.estado}: ${r.motivo}`)
+    }
+  }
+
+  const invalidar = () => {
+    if (!aprovacao) return
+    const r = invalidarPorNovaProjecao(aprovacao, 'demo-conferencias-' + (registros.length + 1))
+    if (r.estado === 'invalidada') {
+      setAprovacao(r.aprovacao)
+      setMsgAprov(r.motivo)
+    } else {
+      setMsgAprov(r.motivo)
+    }
+  }
 
   useEffect(() => {
     obterPerfil()
@@ -220,6 +271,72 @@ const Conferencias = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between gap-2">
+            <span>Revisão do PCP (demonstração — oráculo T4)</span>
+            {aprovacao ? (
+              <Badge
+                variant="outline"
+                className={
+                  aprovacao.estado === 'ativa'
+                    ? 'border-green-300 text-green-900'
+                    : 'border-amber-300 text-amber-900'
+                }
+              >
+                Aprovação {aprovacao.estado}
+              </Badge>
+            ) : (
+              <Badge variant="outline">Sem aprovação</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-3">
+          <p className="text-muted-foreground">
+            Decidir a quantidade final com motivo registra hashes (eventos + conferências).
+            Igualdade 0=0 registra pendência e NÃO libera transação no Omie. Nova conferência
+            invalida a aprovação anterior atomicamente.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1">
+              <span className="text-muted-foreground">Quantidade final (UN)</span>
+              <Input
+                type="number"
+                min={0}
+                value={qtdFinal}
+                onChange={(e) => setQtdFinal(e.target.value)}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-muted-foreground">Motivo da decisão</span>
+              <Input
+                value={motivoAprov}
+                onChange={(e) => setMotivoAprov(e.target.value)}
+                placeholder="Ex.: divergência revisada — final 96 UN"
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={aprovar} disabled={fila.estado !== 'revisavel'}>
+              Aprovar consolidação
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={invalidar}
+              disabled={!aprovacao || aprovacao.estado !== 'ativa'}
+            >
+              Simular nova conferência (invalida)
+            </Button>
+          </div>
+          {msgAprov && (
+            <div className="rounded-md border px-3 py-2 text-xs bg-muted" role="status">
+              {msgAprov}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mt-6">
         <CardHeader>
