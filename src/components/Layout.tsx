@@ -14,6 +14,7 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'painel', rotulo: 'Qualidade', rota: '/qualidade' },
   { area: 'planejamento', rotulo: 'Planejamento', rota: '/planejamento' },
   { area: 'apontar_producao', rotulo: 'Apontamentos', rota: '/apontamentos' },
+  { area: 'conferir_expedicao', rotulo: 'Conferências', rota: '/conferencias' },
 ]
 
 export default function Layout() {
