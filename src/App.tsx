@@ -12,6 +12,7 @@ import Qualidade from './pages/Qualidade'
 import Planejamento from './pages/Planejamento'
 import Apontamentos from './pages/Apontamentos'
 import Conferencias from './pages/Conferencias'
+import Sugestoes from './pages/Sugestoes'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import ProtectedArea from './components/ProtectedArea'
@@ -84,6 +85,14 @@ const App = () => (
               element={
                 <ProtectedArea area={DEMO_CONFERENCIA ? 'painel' : 'conferir_expedicao'}>
                   <Conferencias />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/sugestoes"
+              element={
+                <ProtectedArea area="painel">
+                  <Sugestoes />
                 </ProtectedArea>
               }
             />
