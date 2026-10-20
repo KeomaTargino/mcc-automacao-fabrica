@@ -12,6 +12,7 @@ import {
   type Transacao,
   type AdapterMock,
 } from '@/lib/pcp/fila-omie'
+import { MAPA_OP, mutanteAutorizado } from '@/lib/pcp/contrato-op'
 
 type Cenario = {
   rotulo: string
@@ -263,6 +264,28 @@ const Consolidacoes = () => {
         T1/T2/T3/T4/T6 da SPEC-2-005). O envio real exige contrato da conta, provas de recuperação e
         autorização específica do caso — tasks seguintes.
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Contrato de produção no Omie — comprovado na conta (a2a4ccf1, leitura)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p>
+            Listagem: <strong>{MAPA_OP.listar.call}</strong> ·{' '}
+            {MAPA_OP.listar.conta.total_de_registros} OPs na conta · Consulta:{' '}
+            <strong>{MAPA_OP.consultar.call}</strong> · amostra real: OP {MAPA_OP.amostra.cNumOP} (
+            {MAPA_OP.amostra.nQtde} CX de {MAPA_OP.piloto.codigo}, local{' '}
+            {MAPA_OP.amostra.codigo_local_estoque}, concluída).
+          </p>
+          <p>
+            Guarda CA-O1: sem caso autorizado, <strong>nenhum mutante sai</strong> — guarda negou
+            pedido vazio? <strong>{mutanteAutorizado({}) ? 'sim' : 'sim, negou'}</strong> · mutantes
+            documentados: {MAPA_OP.mutantes.length} (todos com executado=false).
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="space-y-3">
         {resultados.map(({ c, r }) => (
