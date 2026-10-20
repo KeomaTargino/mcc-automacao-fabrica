@@ -1,6 +1,7 @@
-// pocketbase/hooks/pcp_diag_produtos.js — TEMPORÁRIO (re-checagem 3, 20/10/2026)
-// Diagnóstico final 4e0fcf1c: captura BRUTA de empresas (multi-empresa?) e posição de
-// estoque (contraste: estoque tem produtos, catálogo não). Somente leitura; removida após a prova.
+// pocketbase/hooks/pcp_diag_produtos.js — TEMPORÁRIO (4e0fcf1c, 20/10/2026)
+// Sonda dirigida pelo código informado pelo owner (PRD513892905525504):
+// ConsultarProduto + ListarProdutosResumido filtrado + catálogo geral (baseline).
+// Somente leitura; removida após a prova. Acesso: token efêmero PCP_DIAG_TOKEN.
 routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
   const headers = e.requestInfo().headers || {}
@@ -14,10 +15,11 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   if (!appKey || !appSecret) {
     return e.json(200, { ok: false, erro: 'credencial_ausente' })
   }
-  const bruto = (endpoint, call, param) => {
+  const COD = 'PRD513892905525504'
+  const chamar = (call, param) => {
     try {
       const res = $http.send({
-        url: endpoint,
+        url: 'https://app.omie.com.br/api/v1/geral/produtos/',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -28,9 +30,21 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
         }),
         timeout: 15,
       })
+      const j = res.json || {}
+      const arr = Array.isArray(j.produtos) ? j.produtos : []
       return {
         status: res.statusCode,
-        corpo: String(res.raw || JSON.stringify(res.json)).slice(0, 600),
+        total: Number(j.total_de_registros || 0),
+        fault: String(j.faultstring || ''),
+        corpo: arr.length ? undefined : String(JSON.stringify(j)).slice(0, 500),
+        produtos: arr.slice(0, 5).map((p) => ({
+          codigo_produto: String(p.codigo_produto || ''),
+          codigo: String(p.codigo || ''),
+          descricao: String(p.descricao || ''),
+          unidade: String(p.unidade || ''),
+          inativo: String(p.inativo || 'N'),
+          familia: String(p.descricao_familia || p.codigo_familia || ''),
+        })),
       }
     } catch (err) {
       return { status: 0, erro: String(err) }
@@ -38,15 +52,13 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   }
   return e.json(200, {
     ok: true,
-    empresas: bruto('https://app.omie.com.br/api/v1/geral/empresas/', 'ListarEmpresas', {
+    codigo_informado: COD,
+    consultar: chamar('ConsultarProduto', { codigo: COD }),
+    lista_filtrada: chamar('ListarProdutosResumido', {
       pagina: 1,
-      registros_por_pagina: 20,
+      registros_por_pagina: 50,
+      codigo: COD,
     }),
-    estoque: bruto('https://app.omie.com.br/api/v1/estoque/consulta/', 'ListarPosEstoque', {
-      nPagina: 1,
-      nRegPorPagina: 5,
-      dDataPosicao: '',
-      cExibeTodos: 'S',
-    }),
+    catalogo_geral: chamar('ListarProdutosResumido', { pagina: 1, registros_por_pagina: 50 }),
   })
 })
