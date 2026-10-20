@@ -23,10 +23,10 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        call: 'ListarProdutosResumido',
+        call: 'ListarProdutos',
         app_key: appKey,
         app_secret: appSecret,
-        param: [{ pagina: 1, registros_por_pagina: 50 }],
+        param: [{ pagina: 1, registros_por_pagina: 50, apenas_tabela_itens: 'N' }],
       }),
       timeout: 15,
     })
