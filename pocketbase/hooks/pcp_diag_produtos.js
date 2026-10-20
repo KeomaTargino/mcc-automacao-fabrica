@@ -1,6 +1,5 @@
-// pocketbase/hooks/pcp_diag_produtos.js — TEMPORÁRIO (4e0fcf1c, 20/10/2026)
-// Sonda dirigida pelo código informado pelo owner (PRD513892905525504):
-// ConsultarProduto + ListarProdutosResumido filtrado + catálogo geral (baseline).
+// pocketbase/hooks/pcp_diag_produtos.js — TEMPORÁRIO (5d8793fb, 20/10/2026)
+// Conciliação: ficha técnica (malha) do produto piloto + local de estoque.
 // Somente leitura; removida após a prova. Acesso: token efêmero PCP_DIAG_TOKEN.
 routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
@@ -15,11 +14,10 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   if (!appKey || !appSecret) {
     return e.json(200, { ok: false, erro: 'credencial_ausente' })
   }
-  const COD = 'PRD513892905525504'
-  const normalizar = (call, param) => {
+  const chamar = (endpoint, call, param) => {
     try {
       const res = $http.send({
-        url: 'https://app.omie.com.br/api/v1/geral/produtos/',
+        url: endpoint,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -30,72 +28,23 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
         }),
         timeout: 15,
       })
-      return res
-    } catch (err) {
-      return null
-    }
-  }
-  const chamar = (call, param) => {
-    try {
-      const res = $http.send({
-        url: 'https://app.omie.com.br/api/v1/geral/produtos/',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          call: call,
-          app_key: appKey,
-          app_secret: appSecret,
-          param: [param],
-        }),
-        timeout: 15,
-      })
-      const j = res.json || {}
-      const arr = Array.isArray(j.produtos)
-        ? j.produtos
-        : Array.isArray(j.produto_servico_resumido)
-          ? j.produto_servico_resumido
-          : Array.isArray(j.produto_servico)
-            ? j.produto_servico
-            : []
-      return {
-        status: res.statusCode,
-        total: Number(j.total_de_registros || 0),
-        fault: String(j.faultstring || ''),
-        corpo: arr.length ? undefined : String(JSON.stringify(j)).slice(0, 400),
-        produtos: arr.slice(0, 5).map((p) => ({
-          codigo_produto: String(p.codigo_produto || ''),
-          codigo: String(p.codigo || p.cCodigo || ''),
-          descricao: String(p.descricao || p.cDescricao || ''),
-          unidade: String(p.unidade || ''),
-          inativo: String(p.inativo || 'N'),
-          familia: String(p.descricao_familia || p.codigo_familia || ''),
-        })),
-      }
+      return { status: res.statusCode, corpo: String(JSON.stringify(res.json)).slice(0, 1500) }
     } catch (err) {
       return { status: 0, erro: String(err) }
     }
   }
-  // Resumo do produto consultado (campos críticos da SPEC: unidade, inativo, família)
-  const r1 = normalizar('ConsultarProduto', { codigo: COD })
-  const j1 = (r1 && r1.json) || {}
-  const resumo = {
-    status: r1 ? r1.statusCode : 0,
-    codigo_produto: String(j1.codigo_produto || ''),
-    codigo: String(j1.codigo || ''),
-    descricao: String(j1.descricao || ''),
-    unidade: String(j1.unidade || ''),
-    inativo: String(j1.inativo || 'N'),
-    familia: String(j1.descricao_familia || j1.codigo_familia || ''),
-    tipo_item: String(j1.tipo_item || ''),
-    ncm: String(j1.ncm || ''),
-    incluido_em:
-      String((j1.info && j1.info.dInc) || '') + ' ' + String((j1.info && j1.info.hInc) || ''),
-  }
   return e.json(200, {
     ok: true,
-    codigo_informado: COD,
-    produto: resumo,
-    catalogo_resumido: chamar('ListarProdutosResumido', { pagina: 1, registros_por_pagina: 50 }),
-    catalogo_completo: chamar('ListarProdutos', { pagina: 1, registros_por_pagina: 50 }),
+    ficha_consultar: chamar('https://app.omie.com.br/api/v1/geral/malha/', 'ConsultarEstrutura', {
+      codProduto: 'PRD513892905525504',
+    }),
+    ficha_listar: chamar('https://app.omie.com.br/api/v1/geral/malha/', 'ListarEstruturas', {
+      nPagina: 1,
+      nRegPorPagina: 50,
+    }),
+    locais: chamar('https://app.omie.com.br/api/v1/geral/locaisestoque/', 'ListarLocaisEstoque', {
+      pagina: 1,
+      registros_por_pagina: 50,
+    }),
   })
 })
