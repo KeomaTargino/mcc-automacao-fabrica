@@ -25,7 +25,7 @@ routerAdd('GET', '/backend/v1/pcp/diag/op', (e) => {
         }),
         timeout: 15,
       })
-      return { status: res.statusCode, corpo: String(JSON.stringify(res.json)).slice(0, 1800) }
+      return { status: res.statusCode, corpo: String(JSON.stringify(res.json)).slice(0, 8000) }
     } catch (err) {
       return { status: 0, erro: String(err) }
     }
