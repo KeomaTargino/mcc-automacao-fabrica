@@ -124,7 +124,9 @@ routerAdd(
               itens = (Array.isArray(arr) ? arr : []).map((p) => ({
                 produto_id: String(p.nCodProd || ''),
                 local_id: String(p.codigo_local_estoque || ''),
-                unidade: 'UN',
+                // 5d8793fb: defaultUN retirado — ListarPosEstoque não informa unidade por
+                // linha; a unidade oficial vem do cadastro (join na leitura). Nada inventado.
+                unidade: '',
                 saldo: p.nSaldo !== undefined && p.nSaldo !== null ? Number(p.nSaldo) : null,
                 fisico: p.fisico !== undefined && p.fisico !== null ? Number(p.fisico) : null,
                 reservado:

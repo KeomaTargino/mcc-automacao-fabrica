@@ -8,8 +8,11 @@ import {
   type RespostaCatalogo,
   type DetalheCatalogo,
 } from '@/services/pcp-catalogo'
+import { obterPiloto, type RespostaPiloto } from '@/services/pcp-piloto'
+import { conciliarProduto } from '@/lib/pcp/conciliacao'
 
 const Catalogo = () => {
+  const [piloto, setPiloto] = useState<RespostaPiloto | null>(null)
   const [busca, setBusca] = useState('')
   const [buscaAplicada, setBuscaAplicada] = useState('')
   const [pagina, setPagina] = useState(1)
@@ -37,6 +40,36 @@ const Catalogo = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buscaAplicada, pagina])
 
+  // 5d8793fb: piloto real M011001 — conciliação aplicada no frontend (contrato conciliacao.ts).
+  const [pilotoConciliado, setPilotoConciliado] = useState<ReturnType<
+    typeof conciliarProduto
+  > | null>(null)
+  useEffect(() => {
+    obterPiloto()
+      .then((r) => {
+        setPiloto(r)
+        if (r.disponivel && r.produto) {
+          setPilotoConciliado(
+            conciliarProduto({
+              produto_id: r.produto.produto_id,
+              codigo: r.produto.codigo,
+              descricao: r.produto.descricao,
+              unidade: r.produto.unidade || null,
+              ficha: r.ficha ?? null,
+              locais: r.locais || [],
+              unidades_estoque: r.unidades_estoque || [],
+            }),
+          )
+        } else {
+          setPilotoConciliado(null)
+        }
+      })
+      .catch(() => {
+        setPiloto({ disponivel: false, motivo: 'falha_consulta' })
+        setPilotoConciliado(null)
+      })
+  }, [])
+
   const abrirDetalhe = (produtoId: string) => {
     setDetalhe(null)
     obterDetalhe(produtoId)
@@ -47,6 +80,104 @@ const Catalogo = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-6">Catálogo</h1>
+
+      {piloto && piloto.disponivel && pilotoConciliado && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Piloto real — {pilotoConciliado.descricao} ({pilotoConciliado.codigo})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+              <div>
+                <span className="text-muted-foreground">Unidade oficial:</span>{' '}
+                <strong>{pilotoConciliado.unidade_oficial}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Família:</span>{' '}
+                {piloto.produto?.familia || '—'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Ativo:</span>{' '}
+                {piloto.produto?.ativo === 'S' ? 'Sim' : 'Não'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Itens da ficha:</span>{' '}
+                {pilotoConciliado.ficha?.itens.length ?? 0}
+              </div>
+            </div>
+            {pilotoConciliado.bloqueios.length > 0 && (
+              <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
+                <p className="font-medium">
+                  Bloqueios de qualidade (nada é preenchido por padrão):
+                </p>
+                <ul className="mt-1 list-disc list-inside">
+                  {pilotoConciliado.bloqueios.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {pilotoConciliado.ficha && pilotoConciliado.ficha.itens.length > 0 && (
+              <div className="mt-3">
+                <p className="font-medium mb-1 text-sm">
+                  Ficha técnica (verbatim da fonte — sem conversão):
+                </p>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="pb-1">Insumo</th>
+                      <th className="pb-1">Descrição</th>
+                      <th className="pb-1">Quantidade</th>
+                      <th className="pb-1">Unidade</th>
+                      <th className="pb-1">Perda %</th>
+                      <th className="pb-1">Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pilotoConciliado.ficha.itens.map((i) => (
+                      <tr key={i.insumo}>
+                        <td className="py-1 font-mono text-xs">{i.insumo}</td>
+                        <td>{i.descricao}</td>
+                        <td>{i.quantidade}</td>
+                        <td>{i.unidade}</td>
+                        <td>{i.perda_pct}</td>
+                        <td className="font-mono text-xs">{i.tipo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {piloto.locais && piloto.locais.length > 0 && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Locais de estoque na conta:{' '}
+                {piloto.locais
+                  .map((l) => `${l.descricao} (${l.local_id})${l.padrao ? ' — padrão' : ''}`)
+                  .join('; ')}
+              </p>
+            )}
+            {piloto.unidades_estoque && piloto.unidades_estoque.length > 0 && (
+              <p className="mt-2 text-sm text-amber-800">
+                Unidades registradas nas linhas de estoque do lote ativo:{' '}
+                {piloto.unidades_estoque.join(', ')}
+                {pilotoConciliado.unidades_estoque_incompativeis.length > 0 &&
+                  ` — incompatíveis com o cadastro (sem conversão): ${pilotoConciliado.unidades_estoque_incompativeis.join(', ')}`}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {piloto && !piloto.disponivel && (
+        <div
+          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          Piloto indisponível com dado oficial — nada foi inventado. Motivo: {piloto.motivo}
+          {piloto.detalhe ? ` (${piloto.detalhe})` : ''}
+        </div>
+      )}
 
       <Card className="mb-6">
         <CardHeader>

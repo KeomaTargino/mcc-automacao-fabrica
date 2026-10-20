@@ -207,9 +207,13 @@ routerAdd(
             ie = JSON.parse(re.getString('conteudo') || '{}') || {}
           } catch (_) {}
           const unLinha = String(ie.unidade || '')
+          // 5d8793fb: linha sem unidade herda a oficial do cadastro (join); linha com
+          // unidade própria divergente fica INCOMPATÍVEL — exibida como veio, sem conversão.
           return {
             local_id: String(ie.local_id || ''),
-            unidade: unLinha,
+            unidade: unLinha || unidade,
+            unidade_registrada: unLinha,
+            unidade_oficial: unidade || null,
             saldo: ie.saldo !== undefined ? ie.saldo : null,
             fisico: ie.fisico !== undefined ? ie.fisico : null,
             reservado: ie.reservado !== undefined ? ie.reservado : null,
