@@ -38,7 +38,7 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   }
   return e.json(200, {
     ok: true,
-    empresas: bruto('https://app.omie.com.br/api/v1/geral/empresas/', 'ListarEmpresasCadastro', {
+    empresas: bruto('https://app.omie.com.br/api/v1/geral/empresas/', 'ListarEmpresas', {
       pagina: 1,
       registros_por_pagina: 20,
     }),
