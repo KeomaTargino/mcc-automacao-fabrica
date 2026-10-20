@@ -50,16 +50,22 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
         timeout: 15,
       })
       const j = res.json || {}
-      const arr = Array.isArray(j.produtos) ? j.produtos : []
+      const arr = Array.isArray(j.produtos)
+        ? j.produtos
+        : Array.isArray(j.produto_servico_resumido)
+          ? j.produto_servico_resumido
+          : Array.isArray(j.produto_servico)
+            ? j.produto_servico
+            : []
       return {
         status: res.statusCode,
         total: Number(j.total_de_registros || 0),
         fault: String(j.faultstring || ''),
-        corpo: arr.length ? undefined : String(JSON.stringify(j)).slice(0, 500),
+        corpo: arr.length ? undefined : String(JSON.stringify(j)).slice(0, 400),
         produtos: arr.slice(0, 5).map((p) => ({
           codigo_produto: String(p.codigo_produto || ''),
-          codigo: String(p.codigo || ''),
-          descricao: String(p.descricao || ''),
+          codigo: String(p.codigo || p.cCodigo || ''),
+          descricao: String(p.descricao || p.cDescricao || ''),
           unidade: String(p.unidade || ''),
           inativo: String(p.inativo || 'N'),
           familia: String(p.descricao_familia || p.codigo_familia || ''),
@@ -89,6 +95,7 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
     ok: true,
     codigo_informado: COD,
     produto: resumo,
-    catalogo_geral: chamar('ListarProdutosResumido', { pagina: 1, registros_por_pagina: 50 }),
+    catalogo_resumido: chamar('ListarProdutosResumido', { pagina: 1, registros_por_pagina: 50 }),
+    catalogo_completo: chamar('ListarProdutos', { pagina: 1, registros_por_pagina: 50 }),
   })
 })
