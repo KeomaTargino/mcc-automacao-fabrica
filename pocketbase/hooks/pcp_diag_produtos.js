@@ -6,9 +6,9 @@
 // no header Authorization — nenhuma conta operacional é usada; rota temporária.
 routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
   const esperado = $secrets.get('PB_SUPERUSER_TOKEN') || ''
-  const authz = String(e.requestInfo().header('Authorization') || '')
-  const token = authz.replace(/^Bearer\s+/i, '').trim()
-  if (!esperado || token !== esperado) {
+  const headers = e.requestInfo().headers || {}
+  const authz = String(headers['authorization'] || '')
+  const token = authz.replace(/^Bearer\s+/i, '').trim()  if (!esperado || token !== esperado) {
     return e.unauthorizedError('Token de diagnóstico ausente ou inválido.')
   }
   const appKey = $secrets.get('OMIE_APP_KEY')
