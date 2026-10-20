@@ -14,6 +14,13 @@ import {
   type TipoEvento,
   type Ponto,
 } from '@/lib/pcp/apontamento'
+import {
+  somaRealizadoPonto,
+  projetarOP,
+  encerrarPonto,
+  podeRegistrarAposEncerramento,
+  type EventoPonto,
+} from '@/lib/pcp/ponto'
 
 const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
   { tipo: 'retirada', rotulo: 'Retirada' },
@@ -30,6 +37,56 @@ const Apontamentos = () => {
   const [motivo, setMotivo] = useState('')
   const [resultado, setResultado] = useState('')
   const [opPublicada] = useState(OP_DEMO.estado)
+
+  // ---- Task 64ac4f85: produção por ponto (oráculos da SPEC-2-003) ----
+  const EP = (id: string, tipo: any, qtd: number, extra: any = {}): EventoPonto => ({
+    id,
+    op_id: 'OP-1',
+    op_versao: 1,
+    tipo,
+    item: tipo.startsWith('realizado') ? null : 'INS-1',
+    quantidade: qtd,
+    unidade: tipo.startsWith('realizado') ? 'UN' : 'KG',
+    ponto:
+      tipo === 'realizado_cozinha'
+        ? 'cozinha'
+        : tipo === 'realizado_encaixotamento'
+          ? 'encaixotamento'
+          : 'cozinha',
+    autor: 'demonstracao',
+    criado_em: new Date().toISOString(),
+    ...extra,
+  })
+  const eventosPonto: EventoPonto[] = [
+    EP('d1', 'retirada', 6),
+    EP('d2', 'realizado_cozinha', 40),
+    EP('d3', 'realizado_cozinha', 60, { autor: 'equipe' }),
+    EP('d4', 'realizado_encaixotamento', 98, { ponto: 'encaixotamento' }),
+  ]
+  const FICHA_PONTO = {
+    base_produto: 100,
+    unidade_produto: 'UN',
+    componente: { insumo: 'INS-1', quantidade: 5, unidade: 'KG' },
+  }
+  const projecao = projetarOP(eventosPonto, FICHA_PONTO)
+  const encerraCozinha = () =>
+    encerrarPonto({
+      eventos: eventosPonto,
+      ponto: 'cozinha',
+      ficha: FICHA_PONTO,
+      sessao: { pontos: ['cozinha', 'encaixotamento'] },
+      encerramentos: [],
+      estadoOP: 'publicada',
+      envio: null,
+      autor: 'demonstracao',
+    })
+  const congelado = podeRegistrarAposEncerramento({ encerrado: true, envio: 'enviando' })
+  const invalidacao = podeRegistrarAposEncerramento({ encerrado: true, envio: null })
+  const somaCozinha = somaRealizadoPonto(eventosPonto, 'cozinha')
+  const somaEncaix = somaRealizadoPonto(eventosPonto, 'encaixotamento')
+  const ins = projecao.consumo.find((c) => c.item === 'INS-1')
+  const encerramento = encerraCozinha()
+  const hashEncerramento = encerramento.estado !== 'negado' ? encerramento.registro.hash : '—'
 
   const realizadoEficaz = useMemo(
     () =>
@@ -115,6 +172,31 @@ const Apontamentos = () => {
         → 5 KG de INS-1, ponto cozinha. A ligação com a OP publicada real e os acessos por ponto
         reais vêm na próxima task da fase.
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Produção por ponto — oráculos da SPEC-2-003 (64ac4f85)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p>
+            Incrementos por execução: cozinha 40 + 60 = <strong>{somaCozinha}</strong> (não
+            substituem) · encaixotamento <strong>{somaEncaix}</strong> (registro independente) ·
+            previsto pela ficha (só cozinha): <strong>{projecao.previsto} KG</strong> · retirada 6
+            KG → líquido {ins?.liquido} = diferença <strong>+{ins?.diferenca}</strong>.
+          </p>
+          <p>
+            Encerramento do ponto cozinha: <strong>{encerramento.estado}</strong> com hash{' '}
+            <span className="font-mono text-xs">{hashEncerramento.slice(0, 34)}…</span> · declaração
+            zero com motivo encerra · sem realizado (ou zero sem motivo) nega · evento após
+            encerramento invalida{' '}
+            <strong>{invalidacao.ok ? invalidacao.invalida.join(' + ') : '—'}</strong> · durante
+            envio/incerto:{' '}
+            <strong>{congelado.ok ? 'permitido' : congelado.motivo.slice(0, 60)}</strong>
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
