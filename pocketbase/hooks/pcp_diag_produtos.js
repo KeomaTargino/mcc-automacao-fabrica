@@ -16,6 +16,25 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
     return e.json(200, { ok: false, erro: 'credencial_ausente' })
   }
   const COD = 'PRD513892905525504'
+  const normalizar = (call, param) => {
+    try {
+      const res = $http.send({
+        url: 'https://app.omie.com.br/api/v1/geral/produtos/',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          call: call,
+          app_key: appKey,
+          app_secret: appSecret,
+          param: [param],
+        }),
+        timeout: 15,
+      })
+      return res
+    } catch (err) {
+      return null
+    }
+  }
   const chamar = (call, param) => {
     try {
       const res = $http.send({
@@ -50,15 +69,26 @@ routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
       return { status: 0, erro: String(err) }
     }
   }
+  // Resumo do produto consultado (campos críticos da SPEC: unidade, inativo, família)
+  const r1 = normalizar('ConsultarProduto', { codigo: COD })
+  const j1 = (r1 && r1.json) || {}
+  const resumo = {
+    status: r1 ? r1.statusCode : 0,
+    codigo_produto: String(j1.codigo_produto || ''),
+    codigo: String(j1.codigo || ''),
+    descricao: String(j1.descricao || ''),
+    unidade: String(j1.unidade || ''),
+    inativo: String(j1.inativo || 'N'),
+    familia: String(j1.descricao_familia || j1.codigo_familia || ''),
+    tipo_item: String(j1.tipo_item || ''),
+    ncm: String(j1.ncm || ''),
+    incluido_em:
+      String((j1.info && j1.info.dInc) || '') + ' ' + String((j1.info && j1.info.hInc) || ''),
+  }
   return e.json(200, {
     ok: true,
     codigo_informado: COD,
-    consultar: chamar('ConsultarProduto', { codigo: COD }),
-    lista_filtrada: chamar('ListarProdutosResumido', {
-      pagina: 1,
-      registros_por_pagina: 50,
-      codigo: COD,
-    }),
+    produto: resumo,
     catalogo_geral: chamar('ListarProdutosResumido', { pagina: 1, registros_por_pagina: 50 }),
   })
 })
