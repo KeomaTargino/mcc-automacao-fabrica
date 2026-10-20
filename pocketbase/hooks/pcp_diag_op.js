@@ -33,6 +33,10 @@ routerAdd('GET', '/backend/v1/pcp/diag/op', (e) => {
   return e.json(200, {
     ok: true,
     consultar_por_ncodop: chamar('ConsultarOrdemProducao', { nCodOP: 0 }),
-    listar: chamar('ListarOPs', { nPagina: 1, nRegPorPagina: 10 }),
+    listar: chamar('ListarOrdemProducao', {
+      pagina: 1,
+      registros_por_pagina: 10,
+      apenas_importado_api: 'N',
+    }),
   })
 })
