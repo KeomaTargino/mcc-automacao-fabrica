@@ -2,10 +2,10 @@
 // Diagnóstico do cadastro de produtos no Omie após o cadastro do produto piloto pelo
 // owner ("Cadastrei o produto no Omie"). Somente leitura; sem mutação de dados.
 // REMOVER após a prova (padrão da F1: hook temporário removido em seguida).
-// Acesso: apenas o token de superuser do próprio pod (secret PB_SUPERUSER_TOKEN)
-// no header Authorization — nenhuma conta operacional é usada; rota temporária.
+// Acesso: token efêmero PCP_DIAG_TOKEN (env do projeto) no header Authorization —
+// nenhuma conta operacional é usada; rota temporária, removida após a prova.
 routerAdd('GET', '/backend/v1/pcp/diag/produtos', (e) => {
-  const esperado = $secrets.get('PB_SUPERUSER_TOKEN') || ''
+  const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
   const headers = e.requestInfo().headers || {}
   const authz = String(headers['authorization'] || '')
   const token = authz.replace(/^Bearer\s+/i, '').trim()
