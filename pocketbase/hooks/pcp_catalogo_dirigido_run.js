@@ -38,6 +38,9 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   } catch (_) {}
   if (!lote) return e.json(200, { ok: false, erro: 'lote_ativo_ausente' })
 
+  // Rate-limit: 1 consulta a cada ~1,2s (o Omie bloqueia por "consumo indevido" com
+  // rajadas — MISUSE_API_PROCESS 425 provado em 21/10). Bloqueio detectado → aborta
+  // o lote com pendência explícita para retry posterior (sem falso sucesso).
   const consultar = (codigo) => {
     try {
       const res = $http.send({
@@ -52,6 +55,7 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
         }),
         timeout: 15,
       })
+      if (res.statusCode === 425) return { bloqueado: true }
       if (res.statusCode < 200 || res.statusCode >= 300) return null
       const j = res.json
       if (!j || !j.descricao) return null
@@ -63,8 +67,14 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
 
   const encontrados = []
   const pendencias = []
+  let bloqueado = false
   for (const codigo of codigos) {
     const j = consultar(codigo)
+    if (j && j.bloqueado) {
+      bloqueado = true
+      pendencias.push(codigo + ' (API bloqueada por consumo indevido — retry após a janela)')
+      continue
+    }
     if (!j) {
       pendencias.push(codigo)
       continue
@@ -106,6 +116,7 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
 
   return e.json(200, {
     ok: true,
+    bloqueado: bloqueado,
     lote: loteAtivoId,
     alvo: codigos.length,
     encontrados: encontrados.length,
