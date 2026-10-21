@@ -1,8 +1,11 @@
-// pocketbase/hooks/pcp_catalogo_lote.js — TEMPORÁRIO (4e0fcf1c, execução v3)
-// Executa UM lote de códigos (corpo {codigos:[...]}, máx. 30) com pausa de 350ms
+// pocketbase/hooks/pcp_catalogo_lote.js — TEMPORÁRIO (4e0fcf1c, execução v5)
+// Executa UM lote de códigos (corpo {codigos:[...]}, máx. 30) com pausa de 10s
 // entre consultas (rate limit Omie), grava em pcp_dados (replay idempotente) e
-// devolve cobertura do lote. Detecta bloqueio 425 e aborta sem falso sucesso.
-// NENHUM mutante do Omie. Removida após a execução completa.
+// devolve cobertura do lote. Detecta bloqueio 425 e ABORTA IMEDIATAMENTE:
+// segundo a doc oficial Omie, toda requisição rejeitada durante a janela de
+// bloqueio REINICIA o contador de 30 min — continuar o loop após o 1º 425
+// renova o bloqueio N vezes por POST (causa do loop de 21/10). NENHUM mutante
+// do Omie. Removido após a execução completa.
 routerAdd('POST', '/backend/v1/pcp/catalogo/lote', (e) => {
   const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
   const fallback = 'diag-4e0fcf1c-r2-Tq7xm2Pq9Kv3' // fallback temporário: secret não propaga para o pod sem restart
@@ -77,9 +80,13 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/lote', (e) => {
     const codigo = codigos[i]
     const j = consultar(codigo)
     if (j && j.bloqueado) {
+      // 425: ABORTA o lote inteiro AGORA. Cada consulta rejeitada reinicia o
+      // contador de 30 min do Omie — processar o restante do lote só estende
+      // o bloqueio. Códigos ainda não consultados ficam de fora da resposta
+      // e o driver os reenvia na próxima rodada (estado resumível).
       bloqueado = true
       pendencias.push(codigo + ' (API bloqueada — retry após a janela)')
-      continue
+      break
     }
     if (!j) {
       pendencias.push(codigo)
