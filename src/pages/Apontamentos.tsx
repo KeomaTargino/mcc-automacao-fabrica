@@ -22,6 +22,7 @@ import {
   type EventoPonto,
 } from '@/lib/pcp/ponto'
 import { buscarEventoPorUUID, retificarComGuardas } from '@/lib/pcp/retificacao'
+import { saldoFirme } from '@/lib/pcp/pedidos-firmes'
 
 const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
   { tipo: 'retirada', rotulo: 'Retirada' },
@@ -131,6 +132,44 @@ const Apontamentos = () => {
   const consultaUUID = buscarEventoPorUUID([ORIG], 'EV-001')
   const liquidoEficaz = ret1.estado !== 'negado' ? ret1.evento.quantidade : 0
 
+  // ---- Task 9318a299: oráculos T5 dos pedidos firmes (mapa sintético-v1) ----
+  const MAPA = {
+    versao: 'sintetico-v1',
+    status_elegiveis: ['autorizado', 'faturado', 'parcial'],
+    campo_data: 'data_operacional' as const,
+    horizonte_de: '2026-07-24',
+    horizonte_ate: '2026-10-21',
+  }
+  const LIN = (o: Record<string, unknown>) => ({
+    pedido_id: 'P1',
+    linha_id: 'L1',
+    produto_id: 'PRD-1',
+    unidade: 'UN',
+    quantidade_pedida: 20,
+    quantidade_atendida: 5,
+    status: 'faturado',
+    data_operacional: '2026-10-01',
+    ...o,
+  })
+  const pf15 = saldoFirme([LIN({})], MAPA)
+  const pfExcl = saldoFirme(
+    [
+      LIN({ linha_id: 'A', status: 'cancelado' }),
+      LIN({ linha_id: 'B', data_operacional: '2026-05-01' }),
+    ],
+    MAPA,
+  )
+  const pfReplay = saldoFirme([LIN({}), LIN({})], MAPA)
+  const pfBloq = saldoFirme([LIN({ status: 'nao_sei' })], MAPA)
+  const pfBorda = saldoFirme(
+    [
+      LIN({ data_operacional: '2026-07-24' }),
+      LIN({ linha_id: 'B', data_operacional: '2026-10-21' }),
+    ],
+    MAPA,
+  )
+  const pfRuim = saldoFirme([LIN({ quantidade_pedida: 5, quantidade_atendida: 8 })], MAPA)
+
   const realizadoEficaz = useMemo(
     () =>
       eventos
@@ -235,6 +274,34 @@ const Apontamentos = () => {
             <strong>{retCongela.motivo.slice(0, 40)}…</strong> · OP/versão incompatível:{' '}
             <strong>{retVersao.estado}</strong> · consulta por UUID após timeout: EV-001{' '}
             <strong>{consultaUUID ? 'encontrado (nenhum evento novo)' : '—'}</strong>.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Pedidos firmes no horizonte — oráculos T5 da SPEC-2-001 (9318a299)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p>
+            Mapa <strong>{MAPA.versao}</strong> (regra real só após aprovação do PCP) · confirmada
+            20, atendida 5, no horizonte → firme <strong>{pf15.total_firme}</strong> · cancelada e
+            fora do horizonte → <strong>{pfExcl.total_firme}</strong> · replay →{' '}
+            <strong>{pfReplay.total_firme}</strong>.
+          </p>
+          <p>
+            Status desconhecido →{' '}
+            <strong>
+              {pfBloq.total_firme === null ? 'null (bloqueia)' : String(pfBloq.total_firme)}
+            </strong>
+            , nunca 0 · borda do horizonte inclusiva → <strong>{pfBorda.total_firme}</strong> ·
+            atendida &gt; pedida →{' '}
+            <strong>
+              {pfRuim.total_firme === null ? 'null (bloqueia)' : String(pfRuim.total_firme)}
+            </strong>
+            .
           </p>
         </CardContent>
       </Card>
