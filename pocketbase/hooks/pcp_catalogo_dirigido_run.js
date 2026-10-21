@@ -1,9 +1,10 @@
-// pocketbase/hooks/pcp_catalogo_dirigido_run.js — TEMPORÁRIO (4e0fcf1c, execução v2)
-// Sincronização dirigida por LISTA COMPLETA do owner (1.074 produtos: acabado, matéria-
-// prima etc.). A lista vem do REQUEST (códigos no corpo, máx. 200 por chamada) e o hook
-// consulta o Omie um a um (ConsultarProduto), grava em pcp_dados (recurso produtos,
-// replay idempotente por chave omie:produtos:app1:<codigo>) e devolve cobertura.
-// NENHUM mutante do Omie. Removida após a execução provada.
+// pocketbase/hooks/pcp_catalogo_dirigido_run.js — TEMPORÁRIO (4e0fcf1c, execução v3)
+// Sincronização dirigida da LISTA COMPLETA (1.071 códigos do XLSX oficial do owner).
+// A lista vem do REQUEST (máx. 40 por chamada). Pausa de 350ms entre consultas
+// (≈2,8 req/s, dentro do limite documentado de 3 req/s) e detecção de 425
+// (MISUSE_API_PROCESS — bloqueio por consumo indevido): aborta o restante do lote
+// com pendência explícita, sem falso sucesso. Replay idempotente por chave
+// omie:produtos:app1:<codigo> em pcp_dados (recurso produtos). NENHUM mutante.
 routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
   const headers = e.requestInfo().headers || {}
@@ -19,7 +20,7 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
     ? body.codigos.map((c) => String(c).trim().toUpperCase()).filter(Boolean)
     : []
   if (codigos.length === 0) return e.json(200, { ok: false, erro: 'lista_vazia' })
-  if (codigos.length > 200) return e.json(200, { ok: false, erro: 'lote_maximo_200' })
+  if (codigos.length > 40) return e.json(200, { ok: false, erro: 'lote_maximo_40' })
 
   let fonte = null
   try {
@@ -38,9 +39,11 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   } catch (_) {}
   if (!lote) return e.json(200, { ok: false, erro: 'lote_ativo_ausente' })
 
-  // Rate-limit: 1 consulta a cada ~1,2s (o Omie bloqueia por "consumo indevido" com
-  // rajadas — MISUSE_API_PROCESS 425 provado em 21/10). Bloqueio detectado → aborta
-  // o lote com pendência explícita para retry posterior (sem falso sucesso).
+  const pausa = (ms) => {
+    const fim = Date.now() + ms
+    while (Date.now() < fim) {}
+  }
+
   const consultar = (codigo) => {
     try {
       const res = $http.send({
@@ -69,10 +72,11 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   const pendencias = []
   let bloqueado = false
   for (const codigo of codigos) {
+    pausa(350)
     const j = consultar(codigo)
     if (j && j.bloqueado) {
       bloqueado = true
-      pendencias.push(codigo + ' (API bloqueada por consumo indevido — retry após a janela)')
+      pendencias.push(codigo + ' (API bloqueada — retry após a janela)')
       continue
     }
     if (!j) {
