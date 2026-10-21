@@ -1,8 +1,10 @@
-// pocketbase/hooks/pcp_catalogo_dirigido_run.js — TEMPORÁRIO (4e0fcf1c, execução)
-// Executa a sincronização dirigida dos 91 códigos server-side (token efêmero), em
-// 3 lotes com pausa, gravando em pcp_dados (recurso produtos, replay idempotente).
+// pocketbase/hooks/pcp_catalogo_dirigido_run.js — TEMPORÁRIO (4e0fcf1c, execução v2)
+// Sincronização dirigida por LISTA COMPLETA do owner (1.074 produtos: acabado, matéria-
+// prima etc.). A lista vem do REQUEST (códigos no corpo, máx. 200 por chamada) e o hook
+// consulta o Omie um a um (ConsultarProduto), grava em pcp_dados (recurso produtos,
+// replay idempotente por chave omie:produtos:app1:<codigo>) e devolve cobertura.
 // NENHUM mutante do Omie. Removida após a execução provada.
-routerAdd('GET', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
+routerAdd('POST', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   const esperado = $secrets.get('PCP_DIAG_TOKEN') || ''
   const headers = e.requestInfo().headers || {}
   const authz = String(headers['authorization'] || '')
@@ -12,99 +14,12 @@ routerAdd('GET', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   const appSecret = $secrets.get('OMIE_APP_SECRET')
   if (!appKey || !appSecret) return e.json(200, { ok: false, erro: 'credencial_ausente' })
 
-  const CODIGOS = [
-    'M043024',
-    'M043023',
-    'M092003',
-    'M023005',
-    'M02300500',
-    'M023008',
-    'M02300800',
-    'M011021',
-    'M011026',
-    'M092001',
-    'M021009',
-    'M023006',
-    'M02300600',
-    'M043077',
-    'M021001',
-    'M043090',
-    'M043099',
-    'M011002',
-    'M021008',
-    'M021002',
-    'M011001',
-    'M011003',
-    'M011005',
-    'M021007',
-    'M011008',
-    'M011010',
-    'M021003',
-    'M011015',
-    'M011018',
-    'M011019',
-    'M092006',
-    'M021004',
-    'M043035',
-    'M043096',
-    'M043100',
-    'H022402',
-    'M043097',
-    'M023003',
-    'M02300300',
-    'M043057',
-    'M023004',
-    'M043049',
-    'M043050',
-    'M043052',
-    'M043053',
-    'M031001',
-    'M023009',
-    'M02300900',
-    'M043034',
-    'M023007',
-    'M043094',
-    'A073087',
-    'M011009',
-    'M043063',
-    'M021005',
-    'M011017',
-    'M092009',
-    'M043033',
-    'A051010',
-    'A051024',
-    'A051026',
-    'M092010',
-    'M043093',
-    'M043103',
-    'A051025',
-    'M092008',
-    'M092007',
-    'M043006',
-    'M023001',
-    'M02300100',
-    'M023002',
-    'M02300200',
-    'M031004',
-    'M043017',
-    'A051008',
-    'A051015',
-    'M043101',
-    'M043016',
-    'M043015',
-    'M043091',
-    'M031005',
-    'M043008',
-    'M043067',
-    'M084213',
-    'M084214',
-    'M084215',
-    'M084216',
-    'M084217',
-    'M084219',
-    'M084220',
-    'M084221',
-  ]
+  const body = e.requestInfo().body
+  const codigos = Array.isArray(body.codigos)
+    ? body.codigos.map((c) => String(c).trim().toUpperCase()).filter(Boolean)
+    : []
+  if (codigos.length === 0) return e.json(200, { ok: false, erro: 'lista_vazia' })
+  if (codigos.length > 200) return e.json(200, { ok: false, erro: 'lote_maximo_200' })
 
   let fonte = null
   try {
@@ -148,10 +63,10 @@ routerAdd('GET', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
 
   const encontrados = []
   const pendencias = []
-  for (const codigo of CODIGOS) {
+  for (const codigo of codigos) {
     const j = consultar(codigo)
     if (!j) {
-      pendencias.push('produto não encontrado no Omie por código ' + codigo)
+      pendencias.push(codigo)
       continue
     }
     const unidade =
@@ -192,10 +107,10 @@ routerAdd('GET', '/backend/v1/pcp/catalogo/dirigido-run', (e) => {
   return e.json(200, {
     ok: true,
     lote: loteAtivoId,
-    alvo: CODIGOS.length,
+    alvo: codigos.length,
     encontrados: encontrados.length,
     pendencias_count: pendencias.length,
     pendencias: pendencias,
-    amostra: encontrados.slice(0, 5),
+    amostra: encontrados.slice(0, 3),
   })
 })
