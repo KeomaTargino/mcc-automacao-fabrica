@@ -23,6 +23,14 @@ import {
 } from '@/lib/pcp/ponto'
 import { buscarEventoPorUUID, retificarComGuardas } from '@/lib/pcp/retificacao'
 import { saldoFirme } from '@/lib/pcp/pedidos-firmes'
+import {
+  ativarLote,
+  janela90,
+  marcarPaginaFalha,
+  novoEstado,
+  registrarPagina,
+  restanteReceber,
+} from '@/lib/pcp/importacao-90d'
 
 const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
   { tipo: 'retirada', rotulo: 'Retirada' },
@@ -170,6 +178,101 @@ const Apontamentos = () => {
   )
   const pfRuim = saldoFirme([LIN({ quantidade_pedida: 5, quantidade_atendida: 8 })], MAPA)
 
+  // ---- Task e6aa4afa: importação 90 dias (oráculos CA-D4) ----
+  const J90 = janela90('2026-10-21')
+  const imp = novoEstado('vendas_90d')
+  imp.geracaoAtiva = 1
+  imp.geracoes = { 1: { paginasOk: [1], chaves: ['omie:vendas_90d:D0:L0'], falhas: [] } }
+  const impPag1 = registrarPagina(
+    imp,
+    2,
+    1,
+    [
+      {
+        documento_id: 'DOC-1',
+        linha_id: 'L1',
+        produto_id: '9337428906',
+        local_id: null,
+        unidade_oficial: 'UN',
+        quantidade: 10,
+        tipo_status: 'faturado',
+        data_operacional: '2026-10-01',
+        referencia: null,
+      },
+      {
+        documento_id: 'DOC-1',
+        linha_id: 'L1',
+        produto_id: '9337428906',
+        local_id: null,
+        unidade_oficial: 'UN',
+        quantidade: 10,
+        tipo_status: 'faturado',
+        data_operacional: '2026-10-01',
+        referencia: null,
+      },
+      {
+        documento_id: 'DOC-2',
+        linha_id: 'L2',
+        produto_id: '9337428906',
+        local_id: null,
+        unidade_oficial: 'UN',
+        quantidade: 4,
+        tipo_status: 'faturado',
+        data_operacional: '2026-05-01',
+        referencia: null,
+      },
+    ],
+    'omie',
+    J90,
+  )
+  marcarPaginaFalha(imp, 2, 2)
+  const impAtivaFalha = ativarLote(imp, 2, 2)
+  registrarPagina(
+    imp,
+    2,
+    2,
+    [
+      {
+        documento_id: 'DOC-3',
+        linha_id: 'L3',
+        produto_id: '9337428906',
+        local_id: null,
+        unidade_oficial: 'UN',
+        quantidade: 6,
+        tipo_status: 'faturado',
+        data_operacional: '2026-10-20',
+        referencia: null,
+      },
+    ],
+    'omie',
+    J90,
+  )
+  const impAtivaOk = ativarLote(imp, 2, 2)
+  const MAPAC = {
+    versao: 'sintetico-v1',
+    status_elegiveis: ['aprovado', 'confirmado', 'parcial'],
+    status_excluidos: ['cancelado'],
+    horizonte_de: '2026-07-24',
+    horizonte_ate: '2026-10-21',
+  }
+  const CC = (o: Record<string, unknown>) => ({
+    pedido_id: 'PC-1',
+    linha_id: 'A',
+    produto_id: 'M084073',
+    unidade_oficial: 'KG',
+    quantidade_pedida: 20,
+    quantidade_recebida: 5,
+    data_prevista_local: '2026-10-10',
+    status_origem: 'aprovado',
+    ...o,
+  })
+  const cr15 = restanteReceber([CC({})], MAPAC)
+  const crBloq = restanteReceber([CC({ status_origem: 'nao_sei' })], MAPAC)
+  const crCancel = restanteReceber(
+    [CC({ status_origem: 'cancelado' }), CC({ linha_id: 'B', data_prevista_local: '2026-05-01' })],
+    MAPAC,
+  )
+
   const realizadoEficaz = useMemo(
     () =>
       eventos
@@ -302,6 +405,32 @@ const Apontamentos = () => {
               {pfRuim.total_firme === null ? 'null (bloqueia)' : String(pfRuim.total_firme)}
             </strong>
             .
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Importação 90 dias e restante a receber — oráculos CA-D4 (e6aa4afa)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p>
+            Janela D-89..D: {J90.de} → {J90.ate} · página 1 da geração 2: {impPag1.novas} nova(s),{' '}
+            {impPag1.repetidas} repetida(s) (replay não duplica), {impPag1.fora} fora da janela ·
+            página 2 com falha → ativação{' '}
+            <strong>{impAtivaFalha.ativado ? 'ativou (ERRO)' : 'recusada'}</strong> (
+            {impAtivaFalha.aviso ?? impAtivaFalha.motivo}).
+          </p>
+          <p>
+            Completando a geração 2 → <strong>{impAtivaOk.ativado ? 'ativada' : 'recusada'}</strong>{' '}
+            (lote anterior permaneceu até lá) · restante a receber: 20 pedida − 5 recebida ={' '}
+            <strong>{cr15.total_restante} KG</strong> · status desconhecido →{' '}
+            <strong>
+              {crBloq.total_restante === null ? 'null (bloqueia)' : String(crBloq.total_restante)}
+            </strong>{' '}
+            · cancelada/fora do horizonte → <strong>{crCancel.total_restante}</strong>.
           </p>
         </CardContent>
       </Card>
