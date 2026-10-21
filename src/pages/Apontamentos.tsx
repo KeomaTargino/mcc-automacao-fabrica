@@ -21,6 +21,7 @@ import {
   podeRegistrarAposEncerramento,
   type EventoPonto,
 } from '@/lib/pcp/ponto'
+import { buscarEventoPorUUID, retificarComGuardas } from '@/lib/pcp/retificacao'
 
 const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
   { tipo: 'retirada', rotulo: 'Retirada' },
@@ -87,6 +88,48 @@ const Apontamentos = () => {
   const ins = projecao.consumo.find((c) => c.item === 'INS-1')
   const encerramento = encerraCozinha()
   const hashEncerramento = encerramento.estado !== 'negado' ? encerramento.registro.hash : '—'
+
+  // ---- Task 0096ab26: retificações sem duplicar eventos (oráculos T2/T3/T4/T5) ----
+  const ORIG = {
+    evento_id: 'EV-001',
+    op_id: 'OP-1',
+    op_versao: 1,
+    ponto: 'cozinha',
+    tipo: 'retirada',
+    item: 'INS-1',
+    quantidade: 6,
+    unidade: 'KG',
+    autor: 'demonstracao',
+  }
+  const ALVO_OP = { op_id: 'OP-1', op_versao: 1 }
+  const retOk = {
+    original: ORIG,
+    op_alvo: ALVO_OP,
+    novaQuantidade: 5.8,
+    motivo: 'conferência da balança',
+    novoId: 'EV-002',
+    estadoOP: 'publicada',
+    envio: 'nao_iniciado',
+    existentes: [ORIG],
+    pontosSessao: ['cozinha'],
+    autor: 'demonstracao',
+  }
+  const ret1 = retificarComGuardas(retOk)
+  const retReplay = retificarComGuardas({ ...retOk, existentes: [ORIG, ret1.evento] })
+  const ret409 = retificarComGuardas({
+    ...retOk,
+    novaQuantidade: 5,
+    existentes: [ORIG, ret1.evento],
+  })
+  const retAnula = retificarComGuardas({
+    ...retOk,
+    novaQuantidade: 0,
+    motivo: 'lançamento errôneo',
+  })
+  const retCongela = retificarComGuardas({ ...retOk, envio: 'enviando' })
+  const retVersao = retificarComGuardas({ ...retOk, op_alvo: { op_id: 'OP-1', op_versao: 2 } })
+  const consultaUUID = buscarEventoPorUUID([ORIG], 'EV-001')
+  const liquidoEficaz = ret1.estado !== 'negado' ? ret1.evento.quantidade : 0
 
   const realizadoEficaz = useMemo(
     () =>
@@ -172,6 +215,29 @@ const Apontamentos = () => {
         → 5 KG de INS-1, ponto cozinha. A ligação com a OP publicada real e os acessos por ponto
         reais vêm na próxima task da fase.
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Retificações sem duplicar eventos — oráculos da SPEC-2-003 (0096ab26)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p>
+            Retificar 6 → 5,8 KG: <strong>{ret1.estado}</strong> (novo evento EV-002 referencia o
+            original EV-001, que permanece no histórico) · líquido eficaz{' '}
+            <strong>{liquidoEficaz} KG</strong> · repetição idêntica:{' '}
+            <strong>{retReplay.estado}</strong> · mesmo UUID com payload diferente:{' '}
+            <strong>{ret409.estado}</strong>.
+          </p>
+          <p>
+            Anulação 6 → 0 com motivo: <strong>{retAnula.estado}</strong> · durante envio/incerto:{' '}
+            <strong>{retCongela.motivo.slice(0, 40)}…</strong> · OP/versão incompatível:{' '}
+            <strong>{retVersao.estado}</strong> · consulta por UUID após timeout: EV-001{' '}
+            <strong>{consultaUUID ? 'encontrado (nenhum evento novo)' : '—'}</strong>.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader>
