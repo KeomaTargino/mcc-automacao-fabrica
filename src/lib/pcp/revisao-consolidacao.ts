@@ -58,7 +58,11 @@ export function aprovarConsolidacao(
     hash_conferencias: string
   },
   conta: { acoes: string[]; usuario: string },
-  filaConsolidacao: { estado: 'bloqueada' | 'revisavel' },
+  filaConsolidacao: {
+    estado: 'bloqueada' | 'revisavel'
+    /** true = alguma conferência ausente (nada vira 0 — C3). */
+    ausencia: boolean
+  },
 ): ResultadoAprovar {
   if (!conta.acoes.includes('aprovar_consolidacao')) {
     return {
@@ -72,13 +76,17 @@ export function aprovarConsolidacao(
   if (entrada.motivo.trim().length === 0) {
     return { estado: 'negado', motivo: 'Aprovação exige motivo com a decisão do PCP.' }
   }
-  if (filaConsolidacao.estado !== 'revisavel') {
+  if (filaConsolidacao.ausencia) {
     return {
       estado: 'negado',
       motivo:
-        'Consolidação bloqueada (ausência/divergência): resolva as pendências das conferências antes de aprovar.',
+        'Aprovação negada: há conferência ausente — registre expedição e câmara antes de aprovar (ausência nunca vira 0).',
     }
   }
+  // Divergência NÃO nega a aprovação: decidir a divergência com motivo e
+  // quantidade final É o papel do PCP (oráculo T4: aceita 96 após revisar
+  // 100/98/97/96). A divergência bloqueia o ENVIO (gate da SPEC-2-005),
+  // não a decisão registrada.
   const pendencias: string[] = []
   if (entrada.quantidade_final === 0) {
     pendencias.push(

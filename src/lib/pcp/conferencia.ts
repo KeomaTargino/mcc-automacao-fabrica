@@ -17,6 +17,11 @@
  *   motivo; ausência NUNCA vira 0.
  * - C4 (prova na 30118f65): aprovação com motivo/quantidade final/hashes;
  *   retificação invalida aprovação anterior atomicamente.
+ *
+ * CORREÇÃO 21/10 (bug do owner: "mesmo preenchendo correto não aprova"):
+ * a fila usava a PRIMEIRA conferência de cada etapa (find()); a vigente é a
+ * ÚLTIMA (última escrita vence — base do oráculo T4 e da invalidação C4).
+ * Troca de find() para findLast() + teste de regressão.
  */
 
 export type EtapaConferencia = 'recebimento_expedicao' | 'entrada_camara'
@@ -148,6 +153,9 @@ export interface Consolidacao {
  * Monta a fila de consolidação da OP (C1/C3): quatro quantidades independentes,
  * deltas preservados, ausência/divergência bloqueiam; igualdade exata libera
  * só revisão local (sem transação/envio — o envio é gate da SPEC-2-005).
+ *
+ * A conferência VIGENTE de cada etapa é a ÚLTIMA registrada (última escrita
+ * vence; nova conferência muda o hash e invalida a aprovação anterior — C4).
  */
 export function montarFila(
   op: { op_id: string; versao_op: number },
@@ -156,13 +164,17 @@ export function montarFila(
   conferencias: RegistroConferencia[],
 ): Consolidacao {
   const unidade = 'UN'
-  const exp = conferencias.find(
-    (c) =>
-      c.op_id === op.op_id && c.versao_op === op.versao_op && c.etapa === 'recebimento_expedicao',
-  )
-  const cam = conferencias.find(
-    (c) => c.op_id === op.op_id && c.versao_op === op.versao_op && c.etapa === 'entrada_camara',
-  )
+  const exp = [...conferencias]
+    .reverse()
+    .find(
+      (c) =>
+        c.op_id === op.op_id && c.versao_op === op.versao_op && c.etapa === 'recebimento_expedicao',
+    )
+  const cam = [...conferencias]
+    .reverse()
+    .find(
+      (c) => c.op_id === op.op_id && c.versao_op === op.versao_op && c.etapa === 'entrada_camara',
+    )
   const recebido = exp ? exp.quantidade : null
   const camara = cam ? cam.quantidade : null
   const pendencias: string[] = []

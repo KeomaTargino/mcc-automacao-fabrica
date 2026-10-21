@@ -37,6 +37,8 @@ const Conferencias = () => {
 
   const aprovar = () => {
     const q = Number(qtdFinal)
+    const ausencia =
+      fila.quantidades.recebido_expedicao === null || fila.quantidades.entrada_camara === null
     const r = aprovarConsolidacao(
       {
         aprovacao_id: `AP-${OP_CONFERENCIA_DEMO.op_id}-${OP_CONFERENCIA_DEMO.versao_op}`,
@@ -49,7 +51,7 @@ const Conferencias = () => {
         hash_conferencias: 'demo-conferencias-' + registros.length,
       },
       { acoes: ['aprovar_consolidacao'], usuario: 'keoma.targino' },
-      { estado: fila.estado === 'revisavel' ? 'revisavel' : 'bloqueada' },
+      { estado: fila.estado === 'revisavel' ? 'revisavel' : 'bloqueada', ausencia },
     )
     if (r.estado === 'autorizada') {
       setAprovacao(r.aprovacao)
@@ -318,7 +320,20 @@ const Conferencias = () => {
             </label>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={aprovar} disabled={fila.estado !== 'revisavel'}>
+            <Button
+              size="sm"
+              onClick={aprovar}
+              disabled={
+                fila.quantidades.recebido_expedicao === null ||
+                fila.quantidades.entrada_camara === null
+              }
+              title={
+                fila.quantidades.recebido_expedicao === null ||
+                fila.quantidades.entrada_camara === null
+                  ? 'Registre as conferências de expedição e câmara antes de aprovar'
+                  : 'Registra a decisão do PCP com motivo e hashes'
+              }
+            >
               Aprovar consolidação
             </Button>
             <Button
@@ -330,6 +345,15 @@ const Conferencias = () => {
               Simular nova conferência (invalida)
             </Button>
           </div>
+          {fila.estado !== 'revisavel' &&
+            fila.quantidades.recebido_expedicao !== null &&
+            fila.quantidades.entrada_camara !== null && (
+              <p className="text-xs text-amber-700" role="note">
+                Fila com divergência: a aprovação registra a DECISÃO do PCP (motivo + quantidade
+                final). O envio ao Omie continua bloqueado até a fila ficar revisável — gate da
+                SPEC-2-005.
+              </p>
+            )}
           {msgAprov && (
             <div className="rounded-md border px-3 py-2 text-xs bg-muted" role="status">
               {msgAprov}
