@@ -41,6 +41,7 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/lote', (e) => {
     const fim = Date.now() + ms
     while (Date.now() < fim) {}
   }
+  const PAUSA_MS = 10000 // 0,1 req/s — o rate limit real do Omie é muito mais baixo
 
   const consultar = (codigo) => {
     try {
@@ -70,7 +71,7 @@ routerAdd('POST', '/backend/v1/pcp/catalogo/lote', (e) => {
   const pendencias = []
   let bloqueado = false
   for (let i = 0; i < codigos.length; i++) {
-    if (i > 0) pausa(350)
+    if (i > 0) pausa(PAUSA_MS)
     const codigo = codigos[i]
     const j = consultar(codigo)
     if (j && j.bloqueado) {
