@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
->>>>>>>
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,7 +26,6 @@ const Conferencias = () => {
   const [quantidade, setQuantidade] = useState('')
   const [motivo, setMotivo] = useState('')
   const [resultado, setResultado] = useState('')
->>>>>>>
   // Demonstração: produzido/encaixotados sintéticos (o real vem da OP publicada na task d77447ab)
   const [produzido] = useState(100)
   const [encaixotado] = useState(98)
@@ -37,7 +35,6 @@ const Conferencias = () => {
   const [motivoAprov, setMotivoAprov] = useState('')
   const [msgAprov, setMsgAprov] = useState('')
   const inputQtd = useRef<HTMLInputElement>(null)
->>>>>>>
 
   const aprovar = () => {
     const q = Number(qtdFinal)
@@ -111,12 +108,13 @@ const Conferencias = () => {
   const registrar = (etapa: EtapaConferencia) => {
     const q = Number(quantidade)
     if (quantidade.trim() === '' || !Number.isFinite(q) || q < 0) {
-      setResultado('Digite a quantidade conferida antes de registrar (nada é preenchido por padrão).')
+      setResultado(
+        'Digite a quantidade conferida antes de registrar (nada é preenchido por padrão).',
+      )
       inputQtd.current?.focus()
       return
     }
     const ponto: PontoConferencia = etapa === 'recebimento_expedicao' ? 'expedicao' : 'camara_fria'
->>>>>>>
     const sessao = etapa === 'recebimento_expedicao' ? SESSAO_EXPEDICAO : SESSAO_CAMARA
     const r = registrarConferencia(
       {
@@ -143,7 +141,6 @@ const Conferencias = () => {
       setQuantidade('') // campo limpo: a próxima conferência é digitada, nunca puxada
       inputQtd.current?.focus()
     } else if (r.estado === 'replay') {
->>>>>>>
       setResultado('Repetição ignorada: a conferência já estava registrada (idempotência).')
     } else {
       setResultado(`${r.estado}: ${r.motivo}`)
@@ -219,7 +216,6 @@ const Conferencias = () => {
                 onChange={(e) => setQuantidade(e.target.value)}
               />
             </label>
->>>>>>>
             <label className="block space-y-1">
               <span className="text-muted-foreground">Motivo (obrigatório para quantidade 0)</span>
               <Input
