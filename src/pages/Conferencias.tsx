@@ -92,6 +92,18 @@ const Conferencias = () => {
     [produzido, encaixotado, registros],
   )
 
+  // Última conferência VIGENTE por etapa (a fila usa a última — feedback visual do botão).
+  const ultima = useMemo(
+    () => ({
+      expedicao:
+        [...registros].reverse().find((r) => r.etapa === 'recebimento_expedicao')?.quantidade ??
+        null,
+      camara:
+        [...registros].reverse().find((r) => r.etapa === 'entrada_camara')?.quantidade ?? null,
+    }),
+    [registros],
+  )
+
   const registrar = (etapa: EtapaConferencia) => {
     const q = Number(quantidade)
     const ponto: PontoConferencia = etapa === 'recebimento_expedicao' ? 'expedicao' : 'camara_fria'
@@ -154,16 +166,26 @@ const Conferencias = () => {
                 size="sm"
                 onClick={() => registrar('recebimento_expedicao')}
                 disabled={!podeConferir}
+                className={
+                  ultima.expedicao !== null
+                    ? 'bg-green-600 text-white hover:bg-green-700 border-green-700'
+                    : undefined
+                }
               >
-                Conferir expedição
+                Conferir expedição{ultima.expedicao !== null ? `: ${ultima.expedicao} UN` : ''}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => registrar('entrada_camara')}
                 disabled={!podeConferir}
+                className={
+                  ultima.camara !== null
+                    ? 'bg-green-600 text-white hover:bg-green-700 border-green-700'
+                    : undefined
+                }
               >
-                Conferir câmara
+                Conferir câmara{ultima.camara !== null ? `: ${ultima.camara} UN` : ''}
               </Button>
             </div>
             {!podeConferir && (
