@@ -15,6 +15,8 @@ import Conferencias from './pages/Conferencias'
 import Sugestoes from './pages/Sugestoes'
 import Consolidacoes from './pages/Consolidacoes'
 import EnvioOmie from './pages/EnvioOmie'
+import Fornecedores from './pages/Fornecedores'
+import Conversoes from './pages/Conversoes'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -104,6 +106,22 @@ const App = () => (
               element={
                 <ProtectedArea area="painel">
                   <Sugestoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/fornecedores"
+              element={
+                <ProtectedArea area="compras">
+                  <Fornecedores />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/conversoes"
+              element={
+                <ProtectedArea area="compras">
+                  <Conversoes />
                 </ProtectedArea>
               }
             />

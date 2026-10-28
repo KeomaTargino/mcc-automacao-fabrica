@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T14:37:43.963Z",
+  "generatedAt": "2026-10-28T14:43:59.338Z",
   "collections": [
     {
       "name": "users",
@@ -718,6 +718,249 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_transacoes_omie_id ON pcp_transacoes_omie (transacao_id)"
+      ]
+    },
+    {
+      "name": "pcp_fornecedores_complemento",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "fornecedor",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contatos",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "prazo_entrega_dias",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_forn_compl_versao ON pcp_fornecedores_complemento (fornecedor, versao)"
+      ]
+    },
+    {
+      "name": "pcp_conversoes",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "item",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fornecedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "apresentacao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "unidade_compra",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fator",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade_estoque",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confirmado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confirmado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_conversoes_versao ON pcp_conversoes (item, fornecedor, apresentacao, versao)"
+      ]
+    },
+    {
+      "name": "pcp_excecoes_compra",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "item",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "documento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "documento_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_excecoes_item_doc ON pcp_excecoes_compra (item, documento, documento_id)"
       ]
     }
   ]
