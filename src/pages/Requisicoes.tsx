@@ -7,7 +7,10 @@ import {
   criarRequisicao,
   decidirCompra,
   enviarParaAprovacao,
+  conferirPedidoCompra,
   escolherCotacao,
+  lancarPedidoCompra,
+  ligarPedidoCompra,
   obterRequisicoes,
   registrarCotacao,
   type RequisicaoCompra,
@@ -38,6 +41,15 @@ const textoDoErro = (e: any): string => {
     return 'Outra alteração chegou antes; a tela foi recarregada.'
   if (d?.erro === 'catalogo_indisponivel' || d?.motivo) return d.motivo
   if (d?.erro === 'sem_motivo') return 'Informe o motivo da recusa.'
+  if (d?.erro === 'escrita_desligada') return d.mensagem
+  if (d?.erro === 'pedido_diferente')
+    return 'Pedido diferente da compra: ' + d.diferencas.join('; ')
+  if (d?.erro === 'pedido_nao_lido') return d.motivo
+  if (d?.erro === 'compra_nao_aprovada')
+    return 'Só compra aprovada e sem alteração depois da aprovação.'
+  if (d?.erro === 'ja_ligada') return 'Esta compra já está ligada a um pedido.'
+  if (d?.erro === 'pedido_ja_ligado') return 'Este pedido já está ligado a outra compra.'
+  if (d?.erro === 'payload_invalido') return d.motivo
   return 'Não foi possível concluir agora. Tente de novo em instantes.'
 }
 
@@ -57,6 +69,7 @@ const Requisicoes = () => {
   })
   const [cot, setCot] = useState<Record<string, { preco: string; prazo: string; cond: string }>>({})
   const [motivoRecusa, setMotivoRecusa] = useState<Record<string, string>>({})
+  const [numeroPedido, setNumeroPedido] = useState<Record<string, string>>({})
 
   const carregar = useCallback(() => {
     obterRequisicoes()
@@ -419,6 +432,78 @@ const Requisicoes = () => {
                       >
                         Recusar
                       </Button>
+                    </div>
+                  )}
+
+                  {r.estado === 'aprovada' && (
+                    <div className="rounded-md border px-3 py-2 space-y-2 bg-muted/40">
+                      {r.vinculo ? (
+                        <div>
+                          {r.vinculo.estado === 'ligado'
+                            ? `Ligado ao pedido ${r.vinculo.numero_omie || '(número ainda não lido)'} do Omie.`
+                            : r.vinculo.estado === 'resultado_incerto'
+                              ? 'Lançamento com resultado incerto: só consulta, nunca repete a gravação.'
+                              : `Situação do lançamento: ${r.vinculo.estado}.`}
+                          {r.vinculo.estado === 'resultado_incerto' && dados?.pode_editar && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-2"
+                              onClick={() =>
+                                agir(() => conferirPedidoCompra(r.id), 'Conferência feita.')
+                              }
+                            >
+                              Conferir no Omie
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        dados?.pode_editar && (
+                          <>
+                            <div className="text-xs text-muted-foreground">
+                              Lance o pedido no Omie com os dados desta compra (fornecedor{' '}
+                              {r.fornecedor}, itens e quantidades acima, código de integração{' '}
+                              <span className="font-mono">{r.id}</span>) e informe o número para
+                              ligar. O lançamento pelo sistema fica desligado até o dono autorizar.
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Input
+                                className="w-40"
+                                placeholder="Número do pedido no Omie"
+                                value={numeroPedido[r.id] ?? ''}
+                                onChange={(e) =>
+                                  setNumeroPedido({ ...numeroPedido, [r.id]: e.target.value })
+                                }
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!(numeroPedido[r.id] ?? '').trim()}
+                                onClick={() =>
+                                  agir(
+                                    () =>
+                                      ligarPedidoCompra({
+                                        requisicao: r.id,
+                                        numero: numeroPedido[r.id],
+                                      }),
+                                    'Compra ligada ao pedido.',
+                                  )
+                                }
+                              >
+                                Ligar ao pedido
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  agir(() => lancarPedidoCompra(r.id), 'Pedido lançado no Omie.')
+                                }
+                              >
+                                Lançar no Omie
+                              </Button>
+                            </div>
+                          </>
+                        )
+                      )}
                     </div>
                   )}
 

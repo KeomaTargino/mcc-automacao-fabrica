@@ -121,8 +121,20 @@ routerAdd(
           confere: a.getString('hash') === conteudo,
         }),
       )
+      let vinculo = null
+      try {
+        const v = $app.findFirstRecordByFilter('pcp_pedidos_compra_vinculo', 'requisicao = {:r}', {
+          r: r.id,
+        })
+        vinculo = {
+          estado: v.getString('estado'),
+          numero_omie: v.getString('numero_omie') || null,
+          origem: v.getString('origem'),
+        }
+      } catch (_) {}
       return {
         id: r.id,
+        vinculo: vinculo,
         fornecedor: r.getString('fornecedor'),
         itens: itens,
         data_necessaria: r.getString('data_necessaria'),

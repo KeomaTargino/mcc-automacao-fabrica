@@ -141,6 +141,7 @@ export interface ItemDaRequisicao {
 
 export interface RequisicaoCompra {
   id: string
+  vinculo: { estado: string; numero_omie: string | null; origem: string } | null
   fornecedor: string
   itens: ItemDaRequisicao[]
   data_necessaria: string
@@ -163,6 +164,48 @@ export interface RequisicaoCompra {
     confere: boolean
   }[]
 }
+
+export interface EntregaCompra {
+  pedido_id: string
+  numero: string | null
+  linha_id: string
+  fornecedor: string | null
+  produto_id: string
+  unidade: string | null
+  quantidade_pedida: number
+  quantidade_recebida: number
+  restante: number
+  data_prevista: string | null
+  dias_atraso: number
+  atrasado: boolean
+  cancelado: boolean
+  emergencial: boolean
+}
+
+export interface RespostaEntregas {
+  entregas: EntregaCompra[]
+  resumo: { fornecedor: string; em_aberto: number; atrasadas: number }[]
+  ultima_leitura: string | null
+  hoje: string
+}
+
+export const obterEntregas = () =>
+  pb.send('/backend/v1/pcp/compras/entregas', { method: 'GET' }) as Promise<RespostaEntregas>
+
+export const ligarPedidoCompra = (corpo: { requisicao: string; numero: string }) =>
+  pb.send('/backend/v1/pcp/compras/pedido/ligar', { method: 'POST', body: corpo }) as Promise<any>
+
+export const lancarPedidoCompra = (requisicao: string) =>
+  pb.send('/backend/v1/pcp/compras/pedido/lancar', {
+    method: 'POST',
+    body: { requisicao },
+  }) as Promise<any>
+
+export const conferirPedidoCompra = (requisicao: string) =>
+  pb.send('/backend/v1/pcp/compras/pedido/conferir', {
+    method: 'POST',
+    body: { requisicao },
+  }) as Promise<any>
 
 export interface RespostaRequisicoes {
   requisicoes: RequisicaoCompra[]

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T16:28:41.502Z",
+  "generatedAt": "2026-10-28T17:07:18.150Z",
   "collections": [
     {
       "name": "users",
@@ -1478,6 +1478,215 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_alcadas_aprovador ON pcp_alcadas (aprovador)"
+      ]
+    },
+    {
+      "name": "pcp_entregas_compra",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "aplicativo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "pedido_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "numero",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "linha_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fornecedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade_pedida",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade_recebida",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_prevista",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "etapa",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cancelado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_entregas_chave ON pcp_entregas_compra (aplicativo, pedido_id, linha_id)",
+        "CREATE INDEX idx_pcp_entregas_numero ON pcp_entregas_compra (numero)"
+      ]
+    },
+    {
+      "name": "pcp_pedidos_compra_vinculo",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "requisicao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "codigo_integracao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "numero_omie",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cod_pedido_omie",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ligado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hora",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resultado",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_vinculo_requisicao ON pcp_pedidos_compra_vinculo (requisicao)"
       ]
     }
   ]
