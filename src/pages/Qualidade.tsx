@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -8,6 +8,8 @@ import {
   HORIZONTE_DEMO,
   rotuloBloqueio,
 } from '@/lib/pcp/qualidade'
+import { ROTULO_ORIGEM } from '@/lib/pcp/faltantes'
+import { obterFaltantes, type RespostaFaltantes } from '@/services/pcp-faltantes'
 
 const COR_BLOQUEIO: Record<string, string> = {
   calculo_estoque: 'bg-amber-100 text-amber-900 border-amber-300',
@@ -19,6 +21,99 @@ const ROTULO_BLOQUEIO_CURTO: Record<string, string> = {
   calculo_estoque: 'Estoque bloqueado',
   calculo_receita: 'Receita bloqueada',
   calculo_sugestao: 'Sugestões bloqueadas',
+}
+
+const MOTIVO_INCOMPLETO: Record<string, string> = {
+  catalogo_sem_lote_ativo: 'O catálogo do Omie ainda não foi lido.',
+  estoque_sem_lote_ativo: 'O estoque do Omie ainda não foi lido.',
+  catalogo_nao_lido_por_inteiro:
+    'O catálogo ainda não foi lido por inteiro. Enquanto isso, a lista fica vazia para não acusar falta de produto que só não foi lido.',
+}
+
+const FaltantesOmie = () => {
+  const [dados, setDados] = useState<RespostaFaltantes | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  useEffect(() => {
+    let ativo = true
+    obterFaltantes()
+      .then((r) => ativo && setDados(r))
+      .catch(
+        () =>
+          ativo && setErro('Não foi possível carregar a lista agora. Tente de novo em instantes.'),
+      )
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">O que falta cadastrar no Omie</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {erro && (
+          <div
+            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-900"
+            role="alert"
+          >
+            {erro}
+          </div>
+        )}
+        {!erro && !dados && <p className="text-muted-foreground">Carregando a lista…</p>}
+        {dados && dados.situacao === 'catalogo_incompleto' && (
+          <div
+            className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900"
+            role="status"
+          >
+            {MOTIVO_INCOMPLETO[dados.motivo ?? ''] ?? 'A lista ainda não pode ser montada.'}
+          </div>
+        )}
+        {dados && dados.situacao === 'ok' && dados.itens.length === 0 && (
+          <p>Nenhum produto do estoque está fora do cadastro do Omie.</p>
+        )}
+        {dados && dados.situacao === 'ok' && dados.itens.length > 0 && (
+          <>
+            <p className="text-muted-foreground">
+              {dados.itens.length} produto(s) aparecem no sistema mas não estão no cadastro do Omie.
+              Cadastre no Omie; na próxima leitura o produto sai desta lista.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b text-xs text-muted-foreground">
+                    <th className="py-2 pr-3">Código</th>
+                    <th className="py-2 pr-3">Descrição</th>
+                    <th className="py-2">Onde aparece</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.itens.map((i) => (
+                    <tr key={i.codigo} className="border-b align-top">
+                      <td className="py-2 pr-3 font-mono">{i.codigo}</td>
+                      <td className="py-2 pr-3">{i.descricao ?? '—'}</td>
+                      <td className="py-2">
+                        {i.onde
+                          .map((o) => `${ROTULO_ORIGEM[o.origem]} (${o.referencia})`)
+                          .join('; ')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+        {dados && dados.fontes_sem_leitura.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Ainda não entram nesta lista:{' '}
+            {dados.fontes_sem_leitura.map((o) => ROTULO_ORIGEM[o]).join(' e ')}.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
 const Qualidade = () => {
@@ -33,6 +128,8 @@ const Qualidade = () => {
         O que cada cálculo pode usar hoje — e o que está bloqueado porque um dado oficial está
         ausente ou incompleto. Nada é presumido: dado desconhecido aparece como “desconhecido”.
       </p>
+
+      <FaltantesOmie />
 
       <div
         className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"

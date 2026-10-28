@@ -213,11 +213,14 @@ routerAdd(
             ? null
             : String(j.unidade)
         const inativo = j.inativo === true || j.inativo === 'S' || j.inativo === 'true'
+        // Mesmo formato do catálogo lido por pcp_catalogo.js: ativo 'S'/'N', produto_id e família.
         const linha = {
+          produto_id: String(j.codigo_produto || ''),
           codigo: codigo,
           descricao: String(j.descricao || ''),
           unidade: unidade,
-          ativo: !inativo,
+          ativo: inativo ? 'N' : 'S',
+          familia: String(j.descricao_familia || j.codigo_familia || ''),
           origem: 'consulta_dirigida',
         }
         const chave = 'omie:produtos:app1:' + codigo
