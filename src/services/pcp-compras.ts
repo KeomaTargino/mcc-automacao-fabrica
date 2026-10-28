@@ -112,6 +112,113 @@ export const classificarLinhaPreco = (corpo: { chave: string; classificacao: str
     body: corpo,
   }) as Promise<any>
 
+export interface CotacaoRequisicao {
+  id: string
+  item: string
+  fornecedor: string
+  preco_compra: number
+  unidade_compra: string
+  preco_estoque: number | null
+  ultimo_preco: number | null
+  diferenca_percentual: number | null
+  acima_da_tolerancia: boolean
+  prazo_dias: number
+  condicao_pagamento: string
+  validade: string | null
+  escolhida: boolean
+}
+
+export interface ItemDaRequisicao {
+  item: string
+  quantidadeEstoque: number
+  unidadeEstoque: string
+  apresentacao: string | null
+  unidadeCompra: string | null
+  quantidadeCompra: number | null
+  fatorUsado: number | null
+  pendencias: string[]
+}
+
+export interface RequisicaoCompra {
+  id: string
+  fornecedor: string
+  itens: ItemDaRequisicao[]
+  data_necessaria: string
+  emergencial: boolean
+  motivo_emergencia: string | null
+  estado: string
+  versao: number
+  criado_por: string
+  criado_em: string
+  cotacoes: CotacaoRequisicao[]
+  valor: number | null
+  aprovacoes: {
+    aprovador: string
+    decisao: string
+    valor: number
+    alcada_usada: number | null
+    motivo: string
+    hora: string
+    valida: boolean
+    confere: boolean
+  }[]
+}
+
+export interface RespostaRequisicoes {
+  requisicoes: RequisicaoCompra[]
+  alcadas_cadastradas: number
+  tolerancia_percentual: number | null
+  pode_editar: boolean
+  pode_aprovar: boolean
+}
+
+export const obterRequisicoes = () =>
+  pb.send('/backend/v1/pcp/compras/requisicoes', { method: 'GET' }) as Promise<RespostaRequisicoes>
+
+export const criarRequisicao = (necessidades: any[]) =>
+  pb.send('/backend/v1/pcp/compras/requisicoes', {
+    method: 'POST',
+    body: { necessidades },
+  }) as Promise<any>
+
+export const registrarCotacao = (corpo: {
+  requisicao: string
+  item: string
+  preco: number
+  prazo_dias: number
+  condicao_pagamento: string
+  validade: string
+}) => pb.send('/backend/v1/pcp/compras/cotacao', { method: 'POST', body: corpo }) as Promise<any>
+
+export const escolherCotacao = (id: string) =>
+  pb.send('/backend/v1/pcp/compras/cotacao/escolher', {
+    method: 'POST',
+    body: { id },
+  }) as Promise<any>
+
+export const enviarParaAprovacao = (id: string, versao: number) =>
+  pb.send('/backend/v1/pcp/compras/requisicao/enviar', {
+    method: 'POST',
+    body: { id, versao },
+  }) as Promise<any>
+
+export const alterarQuantidadeRequisicao = (corpo: {
+  id: string
+  versao: number
+  item: string
+  quantidade_estoque: number
+}) =>
+  pb.send('/backend/v1/pcp/compras/requisicao/alterar', {
+    method: 'POST',
+    body: corpo,
+  }) as Promise<any>
+
+export const decidirCompra = (corpo: {
+  id: string
+  decisao: 'aprovada' | 'recusada'
+  motivo: string
+}) => pb.send('/backend/v1/pcp/compras/aprovacao', { method: 'POST', body: corpo }) as Promise<any>
+
 export const obterFornecedores = () =>
   pb.send('/backend/v1/pcp/compras/fornecedores', {
     method: 'GET',

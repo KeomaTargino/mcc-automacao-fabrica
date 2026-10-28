@@ -18,6 +18,7 @@ import EnvioOmie from './pages/EnvioOmie'
 import Fornecedores from './pages/Fornecedores'
 import Conversoes from './pages/Conversoes'
 import HistoricoPrecos from './pages/HistoricoPrecos'
+import Requisicoes from './pages/Requisicoes'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -123,6 +124,14 @@ const App = () => (
               element={
                 <ProtectedArea area="compras">
                   <Conversoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/compras/requisicoes"
+              element={
+                <ProtectedArea area="compras">
+                  <Requisicoes />
                 </ProtectedArea>
               }
             />
