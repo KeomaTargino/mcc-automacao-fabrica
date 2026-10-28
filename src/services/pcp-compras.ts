@@ -42,6 +42,76 @@ export interface RespostaConversoes {
   pode_editar: boolean
 }
 
+export type EstadoPreco = 'comparavel' | 'sem_fator' | 'preco_pendente' | 'cancelado'
+
+export interface RegistroHistorico {
+  chave: string
+  pedido_id: string
+  linha_id: string
+  fornecedor: string | null
+  data: string | null
+  quantidade: number | null
+  unidade: string | null
+  preco: number | null
+  fator: number | null
+  estado: EstadoPreco
+}
+
+export interface ResumoPrecos {
+  menor: number
+  maior: number
+  media: number
+  ultimo: number
+  registros: number
+}
+
+export interface RespostaHistorico {
+  item: string | null
+  unidade_estoque: string | null
+  registros: RegistroHistorico[]
+  resumo: {
+    por_fornecedor: (ResumoPrecos & { fornecedor: string | null })[]
+    geral: ResumoPrecos | null
+  }
+  documentos: {
+    pedido_id: string
+    linha_id: string
+    produto_id: string
+    classificacao: string
+    quantidade: number | null
+    unidade_compra: string | null
+    preco_unitario: number | null
+  }[]
+  a_classificar: {
+    chave: string
+    pedido_id: string
+    produto_id: string
+    fornecedor: string | null
+    quantidade: number | null
+    unidade_compra: string | null
+    preco_unitario: number | null
+  }[]
+  pendencias: { a_classificar: number; sem_preco: number; sem_fator: number }
+  ultima_atualizacao: string | null
+  pode_classificar: boolean
+}
+
+export const obterHistorico = (filtro: { item?: string; de?: string; ate?: string }) => {
+  const q = new URLSearchParams()
+  if (filtro.item) q.set('item', filtro.item)
+  if (filtro.de) q.set('de', filtro.de)
+  if (filtro.ate) q.set('ate', filtro.ate)
+  return pb.send('/backend/v1/pcp/compras/historico?' + q.toString(), {
+    method: 'GET',
+  }) as Promise<RespostaHistorico>
+}
+
+export const classificarLinhaPreco = (corpo: { chave: string; classificacao: string }) =>
+  pb.send('/backend/v1/pcp/compras/historico/classificar', {
+    method: 'POST',
+    body: corpo,
+  }) as Promise<any>
+
 export const obterFornecedores = () =>
   pb.send('/backend/v1/pcp/compras/fornecedores', {
     method: 'GET',

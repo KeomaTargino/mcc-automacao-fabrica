@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T14:43:59.338Z",
+  "generatedAt": "2026-10-28T16:02:58.248Z",
   "collections": [
     {
       "name": "users",
@@ -961,6 +961,138 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_excecoes_item_doc ON pcp_excecoes_compra (item, documento, documento_id)"
+      ]
+    },
+    {
+      "name": "pcp_precos_compra",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "aplicativo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "pedido_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "linha_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "produto_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fornecedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade_compra",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_unitario",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo_omie",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cancelado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "classificacao_compras",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "classificado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "classificado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_precos_chave ON pcp_precos_compra (aplicativo, pedido_id, linha_id)",
+        "CREATE INDEX idx_pcp_precos_produto ON pcp_precos_compra (produto_id)"
       ]
     }
   ]
