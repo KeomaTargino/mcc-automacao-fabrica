@@ -165,6 +165,87 @@ export interface RequisicaoCompra {
   }[]
 }
 
+export interface RespostaRecebimentos {
+  pedidos: {
+    pedido_id: string
+    requisicao: string
+    fornecedor: string
+    linhas: { item: string; quantidade_estoque: number; unidade: string }[]
+  }[]
+  recebimentos: {
+    chave: string
+    fornecedor: string
+    data: string
+    linhas: {
+      item: string
+      quantidadeEstoque: number
+      unidadeEstoque: string | null
+      ligacoes: { pedidoId: string; quantidade: number }[]
+      porExcecao: boolean
+      pendencias: string[]
+    }[]
+    diferencas: {
+      pedidoId: string
+      item: string
+      pedido: number
+      recebido: number
+      tipo: 'falta' | 'sobra'
+      diferenca: number
+    }[]
+    avisos_ja_paga: string[]
+    registrado_por: string
+    registrado_em: string
+  }[]
+  parcelas: {
+    pedido: string
+    numero: number
+    vencimento: string
+    valor: number
+    pago_antecipado: boolean
+    referencia_pagamento: string | null
+  }[]
+  pedidos_ja_pagos: string[]
+  excecoes_abertas: { item: string; documento_id: string; motivo: string }[]
+  notas_demo: {
+    pedido: string
+    numero: string | null
+    estado: string
+    pendencias: { mensagem: string }[]
+    avisos: string[]
+    conferida_em: string
+  }[]
+  pode_conferir: boolean
+  pode_financeiro: boolean
+}
+
+export const obterRecebimentos = () =>
+  pb.send('/backend/v1/pcp/compras/recebimentos', {
+    method: 'GET',
+  }) as Promise<RespostaRecebimentos>
+
+export const registrarRecebimento = (corpo: {
+  chave: string
+  fornecedor: string
+  data: string
+  linhas: {
+    item: string
+    quantidade_estoque: number
+    ligacoes: { pedido_id: string; quantidade: number }[]
+  }[]
+}) =>
+  pb.send('/backend/v1/pcp/compras/recebimento', { method: 'POST', body: corpo }) as Promise<any>
+
+export const salvarParcelas = (corpo: {
+  pedido: string
+  parcelas: { numero: number; vencimento: string; valor: number }[]
+}) => pb.send('/backend/v1/pcp/compras/parcelas', { method: 'POST', body: corpo }) as Promise<any>
+
+export const marcarPagoAntecipado = (corpo: { pedido: string; referencia: string }) =>
+  pb.send('/backend/v1/pcp/compras/parcelas/pago', { method: 'POST', body: corpo }) as Promise<any>
+
+export const preConferirNota = (corpo: { pedido: string; nota: any }) =>
+  pb.send('/backend/v1/pcp/compras/preconferencia', { method: 'POST', body: corpo }) as Promise<any>
+
 export interface EntregaCompra {
   pedido_id: string
   numero: string | null

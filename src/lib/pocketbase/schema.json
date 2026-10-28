@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T17:07:18.150Z",
+  "generatedAt": "2026-10-28T17:33:51.907Z",
   "collections": [
     {
       "name": "users",
@@ -1687,6 +1687,249 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_vinculo_requisicao ON pcp_pedidos_compra_vinculo (requisicao)"
+      ]
+    },
+    {
+      "name": "pcp_recebimentos",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "chave",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fornecedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "linhas",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "diferencas",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avisos_ja_paga",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "registrado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "registrado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_receb_chave ON pcp_recebimentos (chave)"
+      ]
+    },
+    {
+      "name": "pcp_parcelas_compra",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "pedido",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "numero",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "vencimento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pago_antecipado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referencia_pagamento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "registrado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_parcelas_pedido ON pcp_parcelas_compra (pedido, numero)"
+      ]
+    },
+    {
+      "name": "pcp_notas_demo",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "pedido",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "demonstracao",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nota",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pendencias",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avisos",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conferida_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conferida_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pcp_notas_demo_pedido ON pcp_notas_demo (pedido)"
       ]
     }
   ]
