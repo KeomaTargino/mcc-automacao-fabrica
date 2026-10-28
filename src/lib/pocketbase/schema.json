@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T17:40:14.222Z",
+  "generatedAt": "2026-10-28T14:20:41.872Z",
   "collections": [
     {
       "name": "users",
@@ -29,14 +29,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "primeira_senha_trocada",
@@ -78,7 +83,9 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "fim",
@@ -127,14 +134,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": []
@@ -191,14 +203,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "execucao",
@@ -244,14 +261,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "lote",
@@ -329,14 +351,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "lote_ativo",
@@ -386,7 +413,14 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["catalogo", "estoque", "producao", "compras", "pedidos", "painel"]
+          "selectValues": [
+            "catalogo",
+            "estoque",
+            "producao",
+            "compras",
+            "pedidos",
+            "painel"
+          ]
         },
         {
           "name": "pode_atualizar_fontes",
@@ -399,14 +433,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "acoes",
@@ -421,7 +460,9 @@
           "system": false
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_pcp_perfis_usuario ON pcp_perfis (usuario)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_perfis_usuario ON pcp_perfis (usuario)"
+      ]
     },
     {
       "name": "pcp_parametros",
@@ -469,17 +510,214 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX `idx_pcp_parametros_versao` ON `pcp_parametros` (versao)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_pcp_parametros_versao` ON `pcp_parametros` (versao)"
+      ]
+    },
+    {
+      "name": "pcp_chaves_escrita",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "chave",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ligada",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "escopo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizada_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizada_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_chaves_escrita_chave ON pcp_chaves_escrita (chave)"
+      ]
+    },
+    {
+      "name": "pcp_transacoes_omie",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "transacao_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "op_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "revisao_consolidacao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_integracao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payload",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lease_ate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "posts_mutantes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pendencias",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resultado",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizada_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autorizada_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_transacoes_omie_id ON pcp_transacoes_omie (transacao_id)"
+      ]
     }
   ]
 }
