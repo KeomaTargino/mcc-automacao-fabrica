@@ -21,6 +21,8 @@ import HistoricoPrecos from './pages/HistoricoPrecos'
 import Requisicoes from './pages/Requisicoes'
 import Entregas from './pages/Entregas'
 import Recebimentos from './pages/Recebimentos'
+import Unidades from './pages/Unidades'
+import PedidosPreparacao from './pages/PedidosPreparacao'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -134,6 +136,22 @@ const App = () => (
               element={
                 <ProtectedArea area="compras">
                   <Requisicoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/unidades"
+              element={
+                <ProtectedArea area="faturamento">
+                  <Unidades />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/pedidos/preparacao"
+              element={
+                <ProtectedArea area="faturamento">
+                  <PedidosPreparacao />
                 </ProtectedArea>
               }
             />
