@@ -18,6 +18,7 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'conferir_expedicao', rotulo: 'Conferências', rota: '/conferencias' },
   { area: 'painel', rotulo: 'Sugestões', rota: '/sugestoes' },
   { area: 'painel', rotulo: 'Consolidações', rota: '/consolidacoes' },
+  { area: 'painel', rotulo: 'Envio ao Omie', rota: '/envio-omie' },
 ]
 
 // Demonstração (task 556da315): em modo demo, o item Conferências aparece para

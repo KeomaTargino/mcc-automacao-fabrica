@@ -14,6 +14,7 @@ import Apontamentos from './pages/Apontamentos'
 import Conferencias from './pages/Conferencias'
 import Sugestoes from './pages/Sugestoes'
 import Consolidacoes from './pages/Consolidacoes'
+import EnvioOmie from './pages/EnvioOmie'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -103,6 +104,14 @@ const App = () => (
               element={
                 <ProtectedArea area="painel">
                   <Sugestoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/envio-omie"
+              element={
+                <ProtectedArea area="painel">
+                  <EnvioOmie />
                 </ProtectedArea>
               }
             />
