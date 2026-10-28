@@ -20,6 +20,7 @@ import Conversoes from './pages/Conversoes'
 import HistoricoPrecos from './pages/HistoricoPrecos'
 import Requisicoes from './pages/Requisicoes'
 import Entregas from './pages/Entregas'
+import Recebimentos from './pages/Recebimentos'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -133,6 +134,14 @@ const App = () => (
               element={
                 <ProtectedArea area="compras">
                   <Requisicoes />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/recebimentos"
+              element={
+                <ProtectedArea area="recebimento">
+                  <Recebimentos />
                 </ProtectedArea>
               }
             />
