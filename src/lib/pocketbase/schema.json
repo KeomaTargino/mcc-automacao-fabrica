@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T19:11:51.716Z",
+  "generatedAt": "2026-10-28T19:42:07.404Z",
   "collections": [
     {
       "name": "users",
@@ -2637,6 +2637,309 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_gravacoes_venda ON pcp_gravacoes_venda (pedido_id, operacao)"
+      ]
+    },
+    {
+      "name": "pcp_parametros_alerta",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "versao",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "aprovador",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aprovado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hash_parametros",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parametros",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_parametros_alerta_versao ON pcp_parametros_alerta (versao)"
+      ]
+    },
+    {
+      "name": "pcp_familias",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "familia",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "produto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "alterado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_familias_produto ON pcp_familias (produto)"
+      ]
+    },
+    {
+      "name": "pcp_alertas",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "chave",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ocorrencia",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "item",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referencia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gravidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "regra",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valores",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "versao_parametros",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aberto_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "atualizado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fonte_desatualizada",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "atualizacoes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_alertas_chave ON pcp_alertas (chave, ocorrencia)",
+        "CREATE INDEX idx_pcp_alertas_estado ON pcp_alertas (estado)"
+      ]
+    },
+    {
+      "name": "pcp_alertas_lacunas",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "regra",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "item",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "campo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_alertas_lacunas ON pcp_alertas_lacunas (regra, item, campo)"
       ]
     }
   ]

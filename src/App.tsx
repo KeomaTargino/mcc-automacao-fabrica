@@ -24,6 +24,8 @@ import Recebimentos from './pages/Recebimentos'
 import Unidades from './pages/Unidades'
 import PedidosPreparacao from './pages/PedidosPreparacao'
 import PedidosManuais from './pages/PedidosManuais'
+import Alertas from './pages/Alertas'
+import ParametrosAlerta from './pages/ParametrosAlerta'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -89,6 +91,22 @@ const App = () => (
               element={
                 <ProtectedArea area="planejamento">
                   <Parametros />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/alertas"
+              element={
+                <ProtectedArea area="painel">
+                  <Alertas />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/parametros/alertas"
+              element={
+                <ProtectedArea area="planejamento">
+                  <ParametrosAlerta />
                 </ProtectedArea>
               }
             />
