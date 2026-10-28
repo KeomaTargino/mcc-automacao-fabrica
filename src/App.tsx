@@ -23,6 +23,7 @@ import Entregas from './pages/Entregas'
 import Recebimentos from './pages/Recebimentos'
 import Unidades from './pages/Unidades'
 import PedidosPreparacao from './pages/PedidosPreparacao'
+import PedidosManuais from './pages/PedidosManuais'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -152,6 +153,14 @@ const App = () => (
               element={
                 <ProtectedArea area="faturamento">
                   <PedidosPreparacao />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/pedidos/manuais"
+              element={
+                <ProtectedArea area="faturamento">
+                  <PedidosManuais />
                 </ProtectedArea>
               }
             />

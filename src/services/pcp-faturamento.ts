@@ -61,16 +61,82 @@ export interface PedidoPreparacao {
   subtotal_pedido: number | null
   diferenca: number | null
   subtotal_pendente: string[]
+  manual: boolean
+  motivo_manual: string | null
+  referencia: string | null
+  frete: { modalidade: string; transportadora: string } | null
+  volumes: { quantidade: number; peso_bruto: number | null; por: string; em: string } | null
+  versao_prep: number
+  estado: 'bloqueado' | 'apto' | 'liberado'
+  motivos_fila: string[]
+  duplicata: { situacao: 'nenhuma' | 'duplicata' | 'possivel'; com?: string; motivo?: string }
+  decisao_duplicata: string | null
+  liberacao: { por: string; em: string } | null
+  gravacoes: { operacao: string; estado: string }[]
+  para_lancar: object[]
+  hash_visto?: string
 }
 
 export interface RespostaPedidosPreparacao {
   disponivel: boolean
   motivo?: string
+  omie_lote?: boolean
   ultimo_sucesso?: string | null
   pedidos?: PedidoPreparacao[]
-  totais?: { pedidos: number; sem_unidade: number; nomes_a_revisar: number }
+  totais?: {
+    pedidos: number
+    sem_unidade: number
+    nomes_a_revisar: number
+    aptos: number
+    bloqueados: number
+    duplicatas_a_revisar: number
+  }
+  chave?: { ligada: boolean; escopo: string | null }
+  pode?: { preparar: boolean; conferir_volumes: boolean; liberar: boolean }
   aviso?: string
 }
+
+const BASE = '/backend/v1/pcp/faturamento'
+const enviar = (rota: string, corpo: object) =>
+  pb.send(`${BASE}/${rota}`, { method: 'POST', body: corpo }) as Promise<any>
+
+export const definirFrete = (c: {
+  pedido_id: string
+  modalidade: string
+  transportadora?: string
+  versao_esperada: number
+}) => enviar('pedido/frete', c)
+export const contarVolumes = (c: {
+  pedido_id: string
+  quantidade: number
+  peso_bruto?: number | null
+  versao_esperada: number
+}) => enviar('pedido/volumes', c)
+export const liberarPedido = (c: {
+  pedido_id: string
+  hash_visto: string
+  versao_esperada: number
+}) => enviar('pedido/liberar', c)
+export const criarPedidoManual = (c: {
+  cliente_omie: string
+  data: string
+  itens: { item: string; quantidade: number }[]
+  motivo: string
+  referencia?: string
+}) => enviar('pedido/manual', c)
+export const decidirDuplicata = (c: {
+  pedido_id: string
+  decisao: 'nao_e_duplicata' | 'e_duplicata'
+  motivo: string
+}) => enviar('pedido/duplicata', c)
+export const gravarVenda = (c: {
+  pedido_id: string
+  operacao: 'incluir_manual' | 'volumes_frete'
+}) => enviar('venda/gravar', c)
+export const conferirVenda = (c: {
+  pedido_id: string
+  operacao: 'incluir_manual' | 'volumes_frete'
+}) => enviar('venda/conferir', c)
 
 export const obterUnidades = () =>
   pb.send('/backend/v1/pcp/faturamento/unidades', { method: 'GET' }) as Promise<RespostaUnidades>
