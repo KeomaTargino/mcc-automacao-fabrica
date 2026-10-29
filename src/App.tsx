@@ -26,6 +26,7 @@ import PedidosPreparacao from './pages/PedidosPreparacao'
 import PedidosManuais from './pages/PedidosManuais'
 import Alertas from './pages/Alertas'
 import HistoricoVendas from './pages/HistoricoVendas'
+import LoopAlertas from './pages/LoopAlertas'
 import ParametrosAlerta from './pages/ParametrosAlerta'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
@@ -100,6 +101,14 @@ const App = () => (
               element={
                 <ProtectedArea area="painel">
                   <HistoricoVendas />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/alertas/loop"
+              element={
+                <ProtectedArea area="painel">
+                  <LoopAlertas />
                 </ProtectedArea>
               }
             />

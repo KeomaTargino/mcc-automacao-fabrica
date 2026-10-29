@@ -252,6 +252,9 @@ const Alertas = () => {
         <Link to="/parametros/alertas" className="underline text-sm">
           Parâmetros de alerta
         </Link>
+        <Link to="/alertas/loop" className="underline text-sm">
+          LOOP-01 (alertas críticos tratados)
+        </Link>
         {dados?.pode_rodar && (
           <Button size="sm" onClick={rodar} disabled={rodando}>
             {rodando ? 'Rodando…' : 'Rodar os alertas agora'}

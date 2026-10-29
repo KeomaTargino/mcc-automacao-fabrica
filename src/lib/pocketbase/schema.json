@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T15:56:53.757Z",
+  "generatedAt": "2026-10-29T17:50:00.376Z",
   "collections": [
     {
       "name": "users",
@@ -3314,6 +3314,220 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_regra_saz_versao ON pcp_regra_sazonalidade (versao)"
+      ]
+    },
+    {
+      "name": "pcp_loop_config",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "loop",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "baseline_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "baseline_definida",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alvo_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "janela_dias",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validador",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "definido_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "definido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_loop_config ON pcp_loop_config (loop)"
+      ]
+    },
+    {
+      "name": "pcp_loop_medicoes",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "loop",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ciclo_inicio",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ciclo_fim",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gerados",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tratados",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proporcao_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nao_aplicavel",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pendente",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_pendente",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "veredito",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "veredito_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "veredito_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "veredito_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "congelada",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calculado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_loop_medicoes ON pcp_loop_medicoes (loop, ciclo_inicio)"
       ]
     }
   ]
