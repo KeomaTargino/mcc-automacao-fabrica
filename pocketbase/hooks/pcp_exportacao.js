@@ -202,7 +202,7 @@ routerAdd(
     return e.json(200, {
       identificacao: 'Dados da American Goodies (propriedade do cliente)',
       gerado_em: new Date().toISOString(),
-      versao_sistema: 'ver rodapé da tela',
+      versao_sistema: 'v0.0.194 (versão em que a exportação foi publicada)',
       completo: linhas
         .filter((l) => COMPLEMENTARES.indexOf(l.colecao) !== -1)
         .every((l) => l.exportada),
