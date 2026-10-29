@@ -28,6 +28,7 @@ import Alertas from './pages/Alertas'
 import HistoricoVendas from './pages/HistoricoVendas'
 import LoopAlertas from './pages/LoopAlertas'
 import Relatorios from './pages/Relatorios'
+import Assistente from './pages/Assistente'
 import ParametrosAlerta from './pages/ParametrosAlerta'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
@@ -105,6 +106,7 @@ const App = () => (
                 </ProtectedArea>
               }
             />
+            <Route path="/assistente" element={<Assistente />} />
             <Route
               path="/relatorios"
               element={

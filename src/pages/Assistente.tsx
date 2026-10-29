@@ -1,0 +1,115 @@
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { perguntarAoAssistente, type RespostaAssistente } from '@/services/pcp-assistente'
+
+interface Troca {
+  pergunta: string
+  resposta: RespostaAssistente | 'permissao' | 'erro'
+}
+
+const Assistente = () => {
+  const { isAuthenticated, loading } = useAuth()
+  const [pergunta, setPergunta] = useState('')
+  const [trocas, setTrocas] = useState<Troca[]>([])
+  const [enviando, setEnviando] = useState(false)
+
+  if (!loading && !isAuthenticated) return <Navigate to="/login" replace />
+
+  const enviar = () => {
+    const p = pergunta.trim()
+    if (p.length < 3) return
+    setEnviando(true)
+    perguntarAoAssistente(p)
+      .then((r) => setTrocas((t) => [{ pergunta: p, resposta: r }, ...t]))
+      .catch((e: any) =>
+        setTrocas((t) => [
+          { pergunta: p, resposta: e?.status === 403 ? 'permissao' : 'erro' },
+          ...t,
+        ]),
+      )
+      .finally(() => {
+        setEnviando(false)
+        setPergunta('')
+      })
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4 max-w-3xl">
+      <h1 className="text-3xl font-bold mb-2">Assistente de consulta</h1>
+      <p className="text-sm text-muted-foreground mb-4">
+        Pergunte em português sobre alertas, compras e pedidos da sua área. O assistente só
+        consulta: não compra, não aprova, não libera, não publica e não envia nada ao Omie. Toda
+        resposta traz a fonte, o período, a hora da atualização e os limites. Cada pergunta fica
+        registrada; não digite dados pessoais.
+      </p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <input
+          aria-label="Pergunta"
+          className="flex-1 min-w-64 border rounded px-3 py-2 text-sm bg-background"
+          placeholder="Ex.: quantos alertas críticos estão abertos?"
+          maxLength={1000}
+          value={pergunta}
+          onChange={(e) => setPergunta(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !enviando && enviar()}
+        />
+        <Button onClick={enviar} disabled={enviando || pergunta.trim().length < 3}>
+          {enviando ? 'Consultando…' : 'Perguntar'}
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {trocas.map((t, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <CardTitle className="text-sm font-normal text-muted-foreground">
+                Você: {t.pergunta}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {t.resposta === 'permissao' && (
+                <div>Sua conta não tem a ação de consultar o assistente.</div>
+              )}
+              {t.resposta === 'erro' && (
+                <div>Não foi possível consultar agora. As telas seguem funcionando.</div>
+              )}
+              {typeof t.resposta === 'object' && (
+                <>
+                  <div>{t.resposta.texto}</div>
+                  {t.resposta.tipo === 'acao_recusada' && (
+                    <div className="text-xs text-amber-800">Tela indicada: {t.resposta.tela}</div>
+                  )}
+                  {t.resposta.tipo === 'sem_dados' && (
+                    <ul className="list-disc pl-5 text-xs text-amber-800">
+                      {t.resposta.falta.map((f) => (
+                        <li key={f}>Falta: {f}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {t.resposta.tipo === 'respondida' && (
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {t.resposta.fontes.map((f) => (
+                        <div key={f.nome}>
+                          Fonte: {f.nome} · período: {f.periodo} · atualizado em{' '}
+                          {f.atualizadoEm
+                            ? new Date(f.atualizadoEm).toLocaleString('pt-BR')
+                            : 'sem registro'}
+                        </div>
+                      ))}
+                      {t.resposta.limites.map((l) => (
+                        <div key={l}>Limite: {l}</div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default Assistente
