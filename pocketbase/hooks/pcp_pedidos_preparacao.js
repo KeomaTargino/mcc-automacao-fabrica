@@ -348,7 +348,15 @@ routerAdd(
           const velho =
             !prep.getString('apto_em') ||
             Date.now() - new Date(prep.getString('apto_em')).getTime() > 120000
-          if (prep.getString('apto_hash') !== seloAtual || (seloAtual && velho)) {
+          if (
+            prep.getString('estado_fila') !== estado ||
+            prep.getString('apto_hash') !== seloAtual ||
+            (seloAtual && velho)
+          ) {
+            prep.set('estado_fila', estado)
+            prep.set('origem', x.origem)
+            prep.set('unidade', u ? u.unidade : '')
+            prep.set('situacao_canal', x.situacao || '')
             prep.set('apto_hash', seloAtual)
             prep.set('apto_em', new Date().toISOString())
             $app.save(prep)
