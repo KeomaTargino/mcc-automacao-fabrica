@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T14:54:00.983Z",
+  "generatedAt": "2026-10-29T15:56:53.757Z",
   "collections": [
     {
       "name": "users",
@@ -3106,6 +3106,214 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_alertas_regras ON pcp_alertas_regras (tipo)"
+      ]
+    },
+    {
+      "name": "pcp_historico_vendas_periodo",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "aplicativo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "periodo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "pagina",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_hvp_chave ON pcp_historico_vendas_periodo (aplicativo, periodo, pagina, produto)",
+        "CREATE INDEX idx_pcp_hvp_produto ON pcp_historico_vendas_periodo (produto)"
+      ]
+    },
+    {
+      "name": "pcp_historico_vendas_cobertura",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "aplicativo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "periodo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ultima_pagina",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_paginas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proxima_tentativa",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_hvc_chave ON pcp_historico_vendas_cobertura (aplicativo, periodo)"
+      ]
+    },
+    {
+      "name": "pcp_regra_sazonalidade",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "versao",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "aprovador",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aprovado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ciclos_minimos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cobertura_minima_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_regra_saz_versao ON pcp_regra_sazonalidade (versao)"
       ]
     }
   ]

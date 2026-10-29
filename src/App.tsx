@@ -25,6 +25,7 @@ import Unidades from './pages/Unidades'
 import PedidosPreparacao from './pages/PedidosPreparacao'
 import PedidosManuais from './pages/PedidosManuais'
 import Alertas from './pages/Alertas'
+import HistoricoVendas from './pages/HistoricoVendas'
 import ParametrosAlerta from './pages/ParametrosAlerta'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
@@ -91,6 +92,14 @@ const App = () => (
               element={
                 <ProtectedArea area="planejamento">
                   <Parametros />
+                </ProtectedArea>
+              }
+            />
+            <Route
+              path="/historico-vendas"
+              element={
+                <ProtectedArea area="painel">
+                  <HistoricoVendas />
                 </ProtectedArea>
               }
             />
