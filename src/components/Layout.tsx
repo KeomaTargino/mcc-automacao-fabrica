@@ -23,6 +23,7 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'painel', rotulo: 'Sazonalidade', rota: '/historico-vendas' },
   { area: 'painel', rotulo: 'Relatórios', rota: '/relatorios' },
   { area: 'painel', rotulo: 'Assistente', rota: '/assistente' },
+  { area: 'painel', rotulo: 'Exportação', rota: '/exportacao' },
   { area: 'painel', rotulo: 'Envio ao Omie', rota: '/envio-omie' },
   { area: 'compras', rotulo: 'Fornecedores', rota: '/fornecedores' },
   { area: 'compras', rotulo: 'Conversões', rota: '/conversoes' },

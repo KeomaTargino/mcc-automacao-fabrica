@@ -29,6 +29,7 @@ import HistoricoVendas from './pages/HistoricoVendas'
 import LoopAlertas from './pages/LoopAlertas'
 import Relatorios from './pages/Relatorios'
 import Assistente from './pages/Assistente'
+import Exportacao from './pages/Exportacao'
 import ParametrosAlerta from './pages/ParametrosAlerta'
 import Parametros from './pages/Parametros'
 import NotFound from './pages/NotFound'
@@ -107,6 +108,7 @@ const App = () => (
               }
             />
             <Route path="/assistente" element={<Assistente />} />
+            <Route path="/exportacao" element={<Exportacao />} />
             <Route
               path="/relatorios"
               element={
