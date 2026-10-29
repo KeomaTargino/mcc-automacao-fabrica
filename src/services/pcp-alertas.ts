@@ -49,6 +49,16 @@ export interface RespostaParametrosAlerta {
 }
 
 export interface AlertaAberto {
+  id: string
+  estado: 'aberto' | 'em_analise' | 'tratado'
+  versao: number
+  responsavel: string | null
+  anterior_id: string | null
+  acao: string | null
+  acao_texto: string | null
+  tratado_por: string | null
+  tratado_em: string | null
+  pode_tratar: boolean
   chave: string
   tipo: 'estoque' | 'producao' | 'compra' | 'preco' | 'pedido' | 'divergencia'
   item: string
@@ -67,9 +77,31 @@ export interface AlertaAberto {
 export interface RespostaAlertas {
   alertas: AlertaAberto[]
   lacunas: Lacuna[]
+  regras_desligadas: string[]
   ultima_rodada: string | null
   pode_rodar: boolean
+  pode_tratar: boolean
+  pode_mudar_regra: boolean
 }
+
+export interface EventoAlerta {
+  alerta_id: string
+  ocorrencia: number
+  evento: string
+  autor: string
+  em: string
+  detalhe: string
+}
+
+export const ACOES_TRATAMENTO: [string, string][] = [
+  ['compra_solicitada', 'Compra solicitada'],
+  ['ordem_reprogramada', 'Ordem reprogramada'],
+  ['fornecedor_contatado', 'Fornecedor contatado'],
+  ['pedido_liberado', 'Pedido liberado'],
+  ['risco_aceito', 'Risco aceito'],
+  ['alerta_indevido', 'Alerta indevido (exige motivo)'],
+  ['outra', 'Outra (descreva)'],
+]
 
 export interface ResultadoRodada {
   executou: boolean
@@ -90,5 +122,22 @@ export const aprovarParametrosAlerta = (corpo: DocParametrosAlerta & { versao_es
 export const salvarFamilia = (corpo: { familia: string; produtos: string[] }) =>
   pb.send(`${BASE}/familia`, { method: 'POST', body: corpo }) as Promise<any>
 export const obterAlertas = () => pb.send(BASE, { method: 'GET' }) as Promise<RespostaAlertas>
+export const assumirAlerta = (c: { id: string; versao_esperada: number }) =>
+  pb.send(`${BASE}/assumir`, { method: 'POST', body: c }) as Promise<any>
+export const tratarAlerta = (c: {
+  id: string
+  versao_esperada: number
+  acao: string
+  texto?: string
+}) => pb.send(`${BASE}/tratar`, { method: 'POST', body: c }) as Promise<any>
+export const mudarRegraAlerta = (c: { tipo: string; ativa: boolean }) =>
+  pb.send(`${BASE}/regra`, { method: 'POST', body: c }) as Promise<any>
+export const obterHistoricoAlerta = (id: string) =>
+  pb.send(`${BASE}/historico`, { method: 'GET', query: { id } }) as Promise<{
+    alerta_id: string
+    eventos: EventoAlerta[]
+  }>
+export const obterContadorAlertas = () =>
+  pb.send(`${BASE}/contador`, { method: 'GET' }) as Promise<{ abertos: number }>
 export const rodarAlertas = () =>
   pb.send(`${BASE}/rodar`, { method: 'POST', body: {} }) as Promise<ResultadoRodada>

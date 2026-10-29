@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T19:42:07.404Z",
+  "generatedAt": "2026-10-29T14:54:00.983Z",
   "collections": [
     {
       "name": "users",
@@ -2876,6 +2876,48 @@
             "onCreate",
             "onUpdate"
           ]
+        },
+        {
+          "name": "responsavel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "anterior_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tratado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tratado_em",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -2940,6 +2982,130 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_alertas_lacunas ON pcp_alertas_lacunas (regra, item, campo)"
+      ]
+    },
+    {
+      "name": "pcp_alertas_historico",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "alerta_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evento",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "autor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "detalhe",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pcp_alertas_historico ON pcp_alertas_historico (alerta_id)"
+      ]
+    },
+    {
+      "name": "pcp_alertas_regras",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ativa",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterada_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterada_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_alertas_regras ON pcp_alertas_regras (tipo)"
       ]
     }
   ]

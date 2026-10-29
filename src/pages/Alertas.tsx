@@ -4,8 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  ACOES_TRATAMENTO,
+  assumirAlerta,
+  mudarRegraAlerta,
   obterAlertas,
+  obterHistoricoAlerta,
   rodarAlertas,
+  tratarAlerta,
+  type AlertaAberto,
+  type EventoAlerta,
   type RespostaAlertas,
   type ResultadoRodada,
 } from '@/services/pcp-alertas'
@@ -17,6 +24,12 @@ const TIPO: Record<string, string> = {
   preco: 'Preço',
   pedido: 'Pedido',
   divergencia: 'Divergência',
+}
+
+const ESTADO: Record<string, string> = {
+  aberto: 'aberto',
+  em_analise: 'em análise',
+  tratado: 'tratado',
 }
 
 const NUMERO: Record<string, string> = {
@@ -44,9 +57,150 @@ const NUMERO: Record<string, string> = {
   diferenca: 'diferença',
 }
 
+const EVENTO: Record<string, string> = {
+  assumido: 'assumiu o alerta',
+  tratado: 'tratou o alerta',
+  regra_desligada: 'desligou a regra',
+  regra_ligada: 'ligou a regra',
+}
+
+const msgErro = (e: any) =>
+  e?.status === 403
+    ? 'Sua conta não tem esta ação neste alerta.'
+    : e?.status === 409
+      ? 'Outra pessoa mexeu neste alerta; a lista foi recarregada.'
+      : e?.response?.motivos?.join(' ') || 'Não foi possível concluir agora.'
+
+const Cartao = ({
+  a,
+  recarregar,
+  aviso,
+}: {
+  a: AlertaAberto
+  recarregar: () => void
+  aviso: (m: string) => void
+}) => {
+  const [acao, setAcao] = useState('')
+  const [texto, setTexto] = useState('')
+  const [historico, setHistorico] = useState<EventoAlerta[] | null>(null)
+  const rodar = (f: () => Promise<any>) =>
+    f()
+      .then(() => recarregar())
+      .catch((e) => {
+        aviso(msgErro(e))
+        recarregar()
+      })
+  return (
+    <div className="rounded-md border p-3 space-y-1 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">{ESTADO[a.estado]}</Badge>
+        {a.gravidade === 'critico' ? (
+          <Badge className="bg-red-100 text-red-900 border-red-300">crítico</Badge>
+        ) : (
+          <Badge className="bg-amber-100 text-amber-900 border-amber-300">atenção</Badge>
+        )}
+        {a.fonte_desatualizada && <Badge variant="outline">dado desatualizado</Badge>}
+        {a.anterior_id && <Badge variant="outline">volta de um alerta já tratado</Badge>}
+        {a.responsavel && a.estado === 'em_analise' && (
+          <span className="text-xs">em análise com {a.responsavel}</span>
+        )}
+      </div>
+      <div>{a.regra}</div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {Object.entries(a.valores).map(([k, v]) => (
+          <span key={k}>
+            {NUMERO[k] ?? k}: <strong>{String(v)}</strong>
+          </span>
+        ))}
+      </div>
+      <div className="text-xs text-muted-foreground">
+        Dado de {new Date(a.dado_em).toLocaleString('pt-BR')} · aberto em{' '}
+        {new Date(a.aberto_em).toLocaleString('pt-BR')} · atualizado {a.atualizacoes}{' '}
+        {a.atualizacoes === 1 ? 'vez' : 'vezes'} · parâmetros v{a.versao_parametros}
+      </div>
+      {a.estado === 'tratado' && (
+        <div className="text-xs">
+          Tratado por {a.tratado_por} em{' '}
+          {a.tratado_em ? new Date(a.tratado_em).toLocaleString('pt-BR') : ''}:{' '}
+          {a.acao?.replace(/_/g, ' ')}
+          {a.acao_texto ? ` — ${a.acao_texto}` : ''}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {a.estado === 'aberto' && a.pode_tratar && (
+          <Button
+            size="sm"
+            onClick={() => rodar(() => assumirAlerta({ id: a.id, versao_esperada: a.versao }))}
+          >
+            Assumir
+          </Button>
+        )}
+        {a.estado === 'em_analise' && a.pode_tratar && (
+          <>
+            <select
+              aria-label="Ação tomada"
+              className="border rounded px-2 py-1 text-sm bg-background"
+              value={acao}
+              onChange={(e) => setAcao(e.target.value)}
+            >
+              <option value="">registre a ação tomada</option>
+              {ACOES_TRATAMENTO.map(([v, r]) => (
+                <option key={v} value={v}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Motivo ou descrição"
+              className="border rounded px-2 py-1 text-sm w-56 bg-background"
+              placeholder="motivo ou descrição"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+            />
+            <Button
+              size="sm"
+              disabled={!acao}
+              onClick={() =>
+                rodar(() => tratarAlerta({ id: a.id, versao_esperada: a.versao, acao, texto }))
+              }
+            >
+              Registrar tratamento
+            </Button>
+          </>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            historico
+              ? setHistorico(null)
+              : obterHistoricoAlerta(a.id)
+                  .then((r) => setHistorico(r.eventos))
+                  .catch((e) => aviso(msgErro(e)))
+          }
+        >
+          {historico ? 'Ocultar histórico' : 'Histórico'}
+        </Button>
+      </div>
+      {historico && (
+        <ul className="text-xs list-disc pl-5">
+          {historico.length === 0 && <li>Sem registros ainda.</li>}
+          {historico.map((h, i) => (
+            <li key={i}>
+              {new Date(h.em).toLocaleString('pt-BR')} — {h.autor} {EVENTO[h.evento] ?? h.evento}
+              {h.detalhe ? `: ${h.detalhe.replace(/_/g, ' ')}` : ''} (ocorrência {h.ocorrencia})
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 const Alertas = () => {
   const [dados, setDados] = useState<RespostaAlertas | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [rodada, setRodada] = useState<ResultadoRodada | null>(null)
   const [rodando, setRodando] = useState(false)
 
@@ -76,13 +230,23 @@ const Alertas = () => {
       .finally(() => setRodando(false))
   }
 
+  // agrupados por tipo e item
+  const grupos = new Map<string, { tipo: string; item: string; alertas: AlertaAberto[] }>()
+  for (const a of dados?.alertas ?? []) {
+    const k = `${a.tipo}|${a.item}`
+    const g = grupos.get(k) ?? { tipo: a.tipo, item: a.item, alertas: [] }
+    g.alertas.push(a)
+    grupos.set(k, g)
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Alertas</h1>
       <p className="text-sm text-muted-foreground mb-4">
-        Cada alerta mostra a regra e os números usados. Alerta só informa: não compra, não publica
-        ordem, não muda parâmetro e não gera ação financeira. A mesma situação atualiza o alerta
-        aberto em vez de criar outro.
+        Cada pessoa vê os alertas da sua área. Assuma um alerta para analisá-lo e registre a ação
+        tomada para tratá-lo. O sistema só registra: não compra, não reprograma, não publica ordem,
+        não muda parâmetro e não gera ação financeira. A mesma situação atualiza o alerta aberto; se
+        voltar depois de tratada, nasce um alerta novo ligado ao anterior.
       </p>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link to="/parametros/alertas" className="underline text-sm">
@@ -99,12 +263,41 @@ const Alertas = () => {
           </span>
         )}
       </div>
+      {dados?.pode_mudar_regra && (
+        <div className="mb-4 flex flex-wrap gap-2 text-xs">
+          {Object.entries(TIPO).map(([t, r]) => {
+            const desligada = dados.regras_desligadas.includes(t)
+            return (
+              <Button
+                key={t}
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  mudarRegraAlerta({ tipo: t, ativa: desligada })
+                    .then(carregar)
+                    .catch((e) => setAviso(msgErro(e)))
+                }
+              >
+                {r}: {desligada ? 'desligada — ligar' : 'ligada — desligar'}
+              </Button>
+            )
+          })}
+        </div>
+      )}
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
           role="alert"
         >
           {erro}
+        </div>
+      )}
+      {aviso && (
+        <div
+          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {aviso}
         </div>
       )}
       {rodada && (
@@ -122,38 +315,25 @@ const Alertas = () => {
       {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {dados && dados.alertas.length === 0 && (
         <Card>
-          <CardContent className="py-6 text-sm">Nenhum alerta aberto.</CardContent>
+          <CardContent className="py-6 text-sm">Nenhum alerta da sua área.</CardContent>
         </Card>
       )}
       <div className="space-y-3">
-        {dados?.alertas.map((a) => (
-          <Card key={a.chave}>
+        {[...grupos.values()].map((g) => (
+          <Card key={`${g.tipo}|${g.item}`}>
             <CardHeader>
               <CardTitle className="text-base flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{TIPO[a.tipo] ?? a.tipo}</Badge>
-                <span className="font-mono">{a.item}</span>
-                {a.gravidade === 'critico' ? (
-                  <Badge className="bg-red-100 text-red-900 border-red-300">crítico</Badge>
-                ) : (
-                  <Badge className="bg-amber-100 text-amber-900 border-amber-300">atenção</Badge>
-                )}
-                {a.fonte_desatualizada && <Badge variant="outline">dado desatualizado</Badge>}
+                <Badge variant="outline">{TIPO[g.tipo] ?? g.tipo}</Badge>
+                <span className="font-mono">{g.item}</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {g.alertas.length} {g.alertas.length === 1 ? 'alerta' : 'alertas'}
+                </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm space-y-1">
-              <div>{a.regra}</div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                {Object.entries(a.valores).map(([k, v]) => (
-                  <span key={k}>
-                    {NUMERO[k] ?? k}: <strong>{String(v)}</strong>
-                  </span>
-                ))}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Dado de {new Date(a.dado_em).toLocaleString('pt-BR')} · aberto em{' '}
-                {new Date(a.aberto_em).toLocaleString('pt-BR')} · atualizado {a.atualizacoes}{' '}
-                {a.atualizacoes === 1 ? 'vez' : 'vezes'} · parâmetros v{a.versao_parametros}
-              </div>
+            <CardContent className="space-y-2">
+              {g.alertas.map((a) => (
+                <Cartao key={`${a.id}-${a.versao}`} a={a} recarregar={carregar} aviso={setAviso} />
+              ))}
             </CardContent>
           </Card>
         ))}

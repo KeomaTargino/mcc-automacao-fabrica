@@ -1,6 +1,7 @@
 import { Outlet, Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { obterPerfil, type RespostaPerfil } from '@/services/pcp-access'
+import { obterContadorAlertas } from '@/services/pcp-alertas'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 
@@ -46,6 +47,7 @@ export const DEMO_CONFERENCIA = true
 export default function Layout() {
   const { user, isAuthenticated, signOut } = useAuth()
   const [areas, setAreas] = useState<string[] | null>(null)
+  const [alertasAbertos, setAlertasAbertos] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,6 +58,11 @@ export default function Layout() {
     obterPerfil()
       .then((r: RespostaPerfil) => {
         if (vivo) setAreas(r.perfil ? r.perfil.areas : [])
+        obterContadorAlertas()
+          .then((c) => {
+            if (vivo) setAlertasAbertos(c.abertos)
+          })
+          .catch(() => {})
       })
       .catch(() => {
         if (vivo) setAreas([])
@@ -78,6 +85,7 @@ export default function Layout() {
               ITENS_DEMO.filter((i) => areas.includes(i.area)).map((i) => (
                 <NavLink key={i.rota} to={i.rota} className={navLinkClass}>
                   {i.rotulo}
+                  {i.rota === '/alertas' && alertasAbertos > 0 ? ` (${alertasAbertos})` : ''}
                 </NavLink>
               ))}
           </nav>

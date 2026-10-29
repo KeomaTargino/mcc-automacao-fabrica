@@ -328,18 +328,24 @@ routerAdd(
       )
     }
 
-    // Rodada: a mesma chave atualiza o alerta aberto; senão abre um novo.
+    // Regra desligada (SPEC-3-011): para de gerar alertas do tipo; os que já existem e o histórico ficam.
+    const desligadas = {}
+    for (const r of $app.findRecordsByFilter('pcp_alertas_regras', 'ativa = false', 'tipo', 100, 0))
+      desligadas[r.getString('tipo')] = true
+
+    // Rodada: a mesma chave atualiza o alerta aberto ou em análise; senão abre um novo
+    // (ligado ao anterior se o último dessa chave já foi tratado).
     let criados = 0
     let atualizados = 0
     const vistos = {}
     $app.runInTransaction((tx) => {
       for (const g of gerados) {
-        if (vistos[g.chave]) continue
+        if (vistos[g.chave] || desligadas[g.tipo]) continue
         vistos[g.chave] = true
         let aberto = null
         const ab = tx.findRecordsByFilter(
           'pcp_alertas',
-          "chave = {:c} && estado = 'aberto'",
+          "chave = {:c} && estado != 'tratado'",
           '-ocorrencia',
           1,
           0,
@@ -371,6 +377,8 @@ routerAdd(
           r.set('chave', g.chave)
           r.set('ocorrencia', (todas.length > 0 ? Number(todas[0].get('ocorrencia') || 0) : 0) + 1)
           r.set('estado', 'aberto')
+          r.set('versao', 1)
+          if (todas.length > 0) r.set('anterior_id', todas[0].id)
           r.set('aberto_em', agora.toISOString())
           r.set('atualizacoes', 0)
           campos(r)
