@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,11 @@ const Assistente = () => {
         consulta: não compra, não aprova, não libera, não publica e não envia nada ao Omie. Toda
         resposta traz a fonte, o período, a hora da atualização e os limites. Cada pergunta fica
         registrada; não digite dados pessoais.
+      </p>
+      <p className="mb-3 text-sm">
+        <Link to="/assistente/loop" className="underline">
+          LOOP-02: perguntas prioritárias
+        </Link>
       </p>
       <div className="mb-4 flex flex-wrap gap-2">
         <input
