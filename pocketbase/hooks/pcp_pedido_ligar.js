@@ -140,6 +140,32 @@ routerAdd(
       if (!dele[k]) diferencas.push('item ' + k + ' está na compra e não está no pedido')
     for (const k of Object.keys(dele))
       if (!dela[k]) diferencas.push('item ' + k + ' está no pedido e não está na compra')
+    // Patch 02/11/2026: a quantidade de cada item do pedido do Omie precisa ser a da compra.
+    const esperado = {}
+    for (const i of itens) {
+      const q =
+        i.quantidadeCompra !== null && i.quantidadeCompra !== undefined
+          ? i.quantidadeCompra
+          : i.quantidadeEstoque
+      esperado[norm(i.item)] = (esperado[norm(i.item)] || 0) + Number(q)
+    }
+    const noPedido = {}
+    for (const l of linhas) {
+      const k = norm(l.getString('produto_id'))
+      noPedido[k] = (noPedido[k] || 0) + Number(l.get('quantidade_pedida') || 0)
+    }
+    for (const k of Object.keys(esperado)) {
+      if (noPedido[k] !== undefined && !(Math.abs(noPedido[k] - esperado[k]) <= 1e-6)) {
+        diferencas.push(
+          'quantidade do item ' +
+            k +
+            ': a compra tem ' +
+            esperado[k] +
+            ' e o pedido tem ' +
+            noPedido[k],
+        )
+      }
+    }
     if (diferencas.length > 0)
       return e.json(422, { erro: 'pedido_diferente', diferencas: diferencas })
 

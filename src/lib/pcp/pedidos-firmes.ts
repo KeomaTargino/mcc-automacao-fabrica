@@ -7,6 +7,10 @@
  * sintético. Oráculos T5 da SPEC: confirmada 20/atendida 5 dentro do horizonte = 15;
  * cancelada 7 e fora do horizonte 3 = 0; replay não duplica; desconhecido = null e
  * bloqueia (nunca 0); restante nunca negativo nem acima do pedido.
+ *
+ * Patch de 02/11/2026: uma linha desconhecida bloqueia SÓ aquela linha. As demais continuam
+ * somando e o total sai marcado como parcial (`total_parcial`), com os bloqueios listados.
+ * O total só é null quando nenhuma linha pôde ser calculada.
  */
 
 export interface LinhaPedido {
@@ -36,7 +40,10 @@ export type SaldoLinha =
 export interface ResultadoPedidos {
   mapa_versao: string
   linhas: SaldoLinha[]
-  total_firme: number | null // null se qualquer linha bloqueada (sem somar presumido)
+  /** Soma das linhas calculadas; null só se nenhuma linha pôde ser calculada. */
+  total_firme: number | null
+  /** true quando alguma linha ficou bloqueada: o total não inclui essas linhas. */
+  total_parcial: boolean
   bloqueios: string[]
 }
 
@@ -50,75 +57,64 @@ export function saldoFirme(linhas: LinhaPedido[], mapa: MapaPedidos): ResultadoP
   const vistos = new Set<string>()
   const resultado: SaldoLinha[] = []
   const bloqueios: string[] = []
-  let total: number | null = 0
+  let soma = 0
+  let calculadas = 0
+  const bloquear = (l: LinhaPedido, chave: string, motivoLista: string, motivo: string) => {
+    bloqueios.push(chave + ': ' + motivoLista)
+    resultado.push({
+      linha_id: l.linha_id,
+      firme: null,
+      unidade: l.unidade ?? null,
+      estado: 'bloqueada',
+      motivo,
+    })
+  }
   for (const l of linhas) {
     const chave = l.pedido_id + '+' + l.linha_id
     if (vistos.has(chave)) continue // replay: mesma chave não soma de novo
     vistos.add(chave)
     const unidade = l.unidade ?? ''
     if (l.status === null || l.status === undefined || l.status === '') {
-      bloqueios.push(chave + ': status ausente')
-      resultado.push({
-        linha_id: l.linha_id,
-        firme: null,
-        unidade: l.unidade ?? null,
-        estado: 'bloqueada',
-        motivo: 'status desconhecido',
-      })
-      total = null
+      bloquear(l, chave, 'status ausente', 'status desconhecido')
       continue
     }
     if (
       !mapa.status_elegiveis.includes(l.status) &&
       !['cancelado', 'denegado'].includes(l.status)
     ) {
-      bloqueios.push(chave + ': status fora do mapa (' + l.status + ')')
-      resultado.push({
-        linha_id: l.linha_id,
-        firme: null,
-        unidade: l.unidade ?? null,
-        estado: 'bloqueada',
-        motivo: 'status fora do mapa',
-      })
-      total = null
+      bloquear(l, chave, 'status fora do mapa (' + l.status + ')', 'status fora do mapa')
       continue
     }
     if (l.status === 'cancelado' || l.status === 'denegado') {
       resultado.push({ linha_id: l.linha_id, firme: 0, unidade, estado: 'excluida' })
+      calculadas += 1
       continue
     }
     const noHorizonte = dentroDoHorizonte(l.data_operacional, mapa)
     if (noHorizonte === null) {
-      bloqueios.push(chave + ': data operacional ausente')
-      resultado.push({
-        linha_id: l.linha_id,
-        firme: null,
-        unidade,
-        estado: 'bloqueada',
-        motivo: 'data ausente',
-      })
-      total = null
+      bloquear(l, chave, 'data operacional ausente', 'data ausente')
       continue
     }
     if (!noHorizonte) {
       resultado.push({ linha_id: l.linha_id, firme: 0, unidade, estado: 'excluida' })
+      calculadas += 1
       continue
     }
     const restante = l.quantidade_pedida - l.quantidade_atendida
     if (restante < 0 || !(l.quantidade_pedida >= 0) || !(l.quantidade_atendida >= 0)) {
-      bloqueios.push(chave + ': saldo inconsistente')
-      resultado.push({
-        linha_id: l.linha_id,
-        firme: null,
-        unidade,
-        estado: 'bloqueada',
-        motivo: 'saldo inconsistente',
-      })
-      total = null
+      bloquear(l, chave, 'saldo inconsistente', 'saldo inconsistente')
       continue
     }
     resultado.push({ linha_id: l.linha_id, firme: restante, unidade, estado: 'elegivel' })
-    if (total !== null) total += restante
+    soma += restante
+    calculadas += 1
   }
-  return { mapa_versao: mapa.versao, linhas: resultado, total_firme: total, bloqueios }
+  const haBloqueio = bloqueios.length > 0
+  return {
+    mapa_versao: mapa.versao,
+    linhas: resultado,
+    total_firme: haBloqueio && calculadas === 0 ? null : soma,
+    total_parcial: haBloqueio,
+    bloqueios,
+  }
 }

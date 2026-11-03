@@ -172,6 +172,7 @@ routerAdd(
       const agora = new Date().toISOString()
       chave.set('ligada', true)
       chave.set('escopo', req.id)
+      chave.set('payload_autorizado', JSON.stringify(payload))
       chave.set('autorizada_por', auth.getString('email') || auth.id)
       chave.set('autorizada_em', agora)
       tx.save(chave)

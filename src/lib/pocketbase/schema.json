@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T12:55:32.220Z",
+  "generatedAt": "2026-11-03T14:46:47.950Z",
   "collections": [
     {
       "name": "users",
@@ -590,6 +590,12 @@
             "onCreate",
             "onUpdate"
           ]
+        },
+        {
+          "name": "payload_autorizado",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3777,6 +3783,353 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_pcp_assistente_revisoes ON pcp_assistente_revisoes (pergunta_id)"
+      ]
+    },
+    {
+      "name": "pcp_programacoes",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "versao",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "linhas",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ops",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "publicada_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "publicada_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_programacoes_versao ON pcp_programacoes (versao)"
+      ]
+    },
+    {
+      "name": "pcp_apontamentos",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "evento_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "op_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ponto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "item",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retifica",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hash_evento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_apontamentos_evento ON pcp_apontamentos (evento_id)",
+        "CREATE INDEX idx_pcp_apontamentos_op ON pcp_apontamentos (op_id)"
+      ]
+    },
+    {
+      "name": "pcp_conferencias_op",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "registro_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "op_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "etapa",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ponto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hash_registro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "autor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_conferencias_op_registro ON pcp_conferencias_op (registro_id)",
+        "CREATE INDEX idx_pcp_conferencias_op_op ON pcp_conferencias_op (op_id)"
+      ]
+    },
+    {
+      "name": "pcp_aprovacoes_consolidacao",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "aprovacao_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "op_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "quantidade_final",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_conclusao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aprovador",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hash_eventos",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hash_conferencias",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pendencias",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_pcp_aprovacoes_consolidacao_id ON pcp_aprovacoes_consolidacao (aprovacao_id)",
+        "CREATE INDEX idx_pcp_aprovacoes_consolidacao_op ON pcp_aprovacoes_consolidacao (op_id)"
       ]
     }
   ]

@@ -11,6 +11,10 @@ import { normalizarProduto, type LinhaCatalogo } from './catalogo-dirigido.ts'
 
 /** Guarda de 12 horas depois de um bloqueio (CL-PEND-006); nunca repetir em laço. */
 export const GUARDA_BLOQUEIO_MS = 12 * 60 * 60 * 1000
+/** Espera antes de repetir a mesma consulta depois de um erro (acesso ou transitório). */
+export const ESPERA_REPETICAO_MS = 60 * 1000
+/** Uma rodada parada há mais que isto deixa de segurar a trava (rodada que morreu no meio). */
+export const TRAVA_VALIDADE_MS = 2 * 60 * 1000
 
 export type RespostaOmie =
   | {
@@ -20,7 +24,8 @@ export type RespostaOmie =
       inativo: string | boolean | null
     }
   | { tipo: 'nao_encontrado' }
-  | { tipo: 'bloqueado'; motivo: 'http_425' | 'consumo_redundante' }
+  | { tipo: 'bloqueado'; motivo: 'http_425' | 'consumo_redundante' | 'misuse_api_process' }
+  | { tipo: 'erro_acesso'; detalhe: string }
   | { tipo: 'erro'; detalhe: string }
 
 export interface EstadoSync {
@@ -34,6 +39,10 @@ export interface EstadoSync {
   /** ISO-8601 da próxima tentativa permitida; null quando livre. */
   proximaTentativa: string | null
   motivoBloqueio: string | null
+  /** ISO-8601: o mesmo código só é consultado de novo depois desta hora (60 s após um erro). */
+  repetirApos?: string | null
+  /** Último erro que não é bloqueio, para a tela; nunca vira "não encontrado". */
+  ultimoErro?: string | null
 }
 
 export interface ResultadoSubLote {
@@ -44,7 +53,9 @@ export interface ResultadoSubLote {
     | 'fim_da_lista'
     | 'bloqueio_omie'
     | 'erro_transitorio'
+    | 'erro_acesso'
     | 'aguardando_guarda'
+    | 'aguardando_repeticao'
 }
 
 export function novoSync(codigos: string[]): EstadoSync {
@@ -81,6 +92,8 @@ export function classificarResposta(
   if (status === 425) return { tipo: 'bloqueado', motivo: 'http_425' }
   if (texto.includes('consumo redundante'))
     return { tipo: 'bloqueado', motivo: 'consumo_redundante' }
+  if (texto.includes('misuse_api_process'))
+    return { tipo: 'bloqueado', motivo: 'misuse_api_process' }
   if (
     status >= 200 &&
     status < 300 &&
@@ -97,7 +110,8 @@ export function classificarResposta(
   }
   if (status === 404 || (status >= 200 && status < 300)) return { tipo: 'nao_encontrado' }
   if (status >= 500 || status === 0) return { tipo: 'erro', detalhe: 'http_' + status }
-  return { tipo: 'nao_encontrado' }
+  // 401, 403 e qualquer outro 4xx: chave, permissão ou pedido recusado. É erro de acesso, nunca "não encontrado".
+  return { tipo: 'erro_acesso', detalhe: 'http_' + status }
 }
 
 /**
@@ -117,8 +131,12 @@ export function executarSubLote(
   if (e.proximaTentativa && opcoes.agora.getTime() < new Date(e.proximaTentativa).getTime()) {
     return { estado: e, consultados: 0, parou: 'aguardando_guarda' }
   }
+  if (e.repetirApos && opcoes.agora.getTime() < new Date(e.repetirApos).getTime()) {
+    return { estado: e, consultados: 0, parou: 'aguardando_repeticao' }
+  }
   e.proximaTentativa = null
   e.motivoBloqueio = null
+  e.repetirApos = null
 
   let consultados = 0
   while (e.cursor < e.codigos.length && consultados < opcoes.tamanho) {
@@ -140,8 +158,15 @@ export function executarSubLote(
     } else if (r.tipo === 'nao_encontrado') {
       if (e.naoEncontrados.indexOf(codigo) < 0) e.naoEncontrados.push(codigo)
     } else {
-      // Falha que não é bloqueio: o cursor não avança; a próxima chamada tenta o mesmo código.
-      return { estado: e, consultados, parou: 'erro_transitorio' }
+      // Falha que não é bloqueio: o cursor não avança e o mesmo código só é consultado de novo
+      // depois de 60 s. Erro de acesso fica registrado como erro, fora da lista de faltantes.
+      e.repetirApos = new Date(opcoes.agora.getTime() + ESPERA_REPETICAO_MS).toISOString()
+      e.ultimoErro = r.detalhe
+      return {
+        estado: e,
+        consultados,
+        parou: r.tipo === 'erro_acesso' ? 'erro_acesso' : 'erro_transitorio',
+      }
     }
     e.cursor += 1
   }
@@ -185,4 +210,22 @@ export function resumoSync(e: EstadoSync): {
     proximaTentativa: e.proximaTentativa,
     naoEncontrados: e.naoEncontrados.length,
   }
+}
+
+/**
+ * Trava de rodada única: a sincronização não roda duas vezes ao mesmo tempo. Quem chega com a trava
+ * viva (tomada há menos de TRAVA_VALIDADE_MS) recebe recusa; trava velha é tomada.
+ */
+export function podeTomarTrava(tomadaEm: string | null, agora: Date): boolean {
+  if (!tomadaEm) return true
+  const t = new Date(tomadaEm).getTime()
+  if (!Number.isFinite(t)) return true
+  return agora.getTime() - t >= TRAVA_VALIDADE_MS
+}
+
+/** Guarda do bloqueio guardada na fonte: vale mesmo se a execução foi reiniciada. */
+export function guardaVigente(proximaTentativa: string | null, agora: Date): boolean {
+  if (!proximaTentativa) return false
+  const t = new Date(proximaTentativa).getTime()
+  return Number.isFinite(t) && agora.getTime() < t
 }

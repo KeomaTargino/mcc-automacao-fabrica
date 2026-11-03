@@ -149,6 +149,24 @@ export function ligarPedido(entrada: {
     if (!dele.has(i)) dif.push('item ' + i + ' está na compra e não está no pedido')
   for (const i of dele)
     if (!dela.has(i)) dif.push('item ' + i + ' está no pedido e não está na compra')
+  // Patch 02/11/2026: a quantidade de cada item do pedido do Omie precisa ser a da compra
+  // (unidade de compra quando há fator; senão a de estoque). Diferente = recusa a ligação.
+  const esperado = new Map<string, number>()
+  for (const i of r.itens) {
+    const k = norm(i.item)
+    esperado.set(k, (esperado.get(k) ?? 0) + (i.quantidadeCompra ?? i.quantidadeEstoque))
+  }
+  const noPedido = new Map<string, number>()
+  for (const i of entrada.pedido.itens) {
+    const k = norm(i.produto)
+    noPedido.set(k, (noPedido.get(k) ?? 0) + i.quantidade)
+  }
+  for (const [k, q] of esperado) {
+    const p = noPedido.get(k)
+    if (p !== undefined && !(Math.abs(p - q) <= 1e-6)) {
+      dif.push('quantidade do item ' + k + ': a compra tem ' + q + ' e o pedido tem ' + p)
+    }
+  }
   if (dif.length > 0) return { ok: false, http: 422, erro: 'pedido_diferente', diferencas: dif }
   return {
     ok: true,

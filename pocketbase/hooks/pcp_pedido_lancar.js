@@ -148,6 +148,18 @@ routerAdd(
       },
       produtos_incluir: produtos,
     }
+    // Patch 02/11/2026: o que vai ao Omie precisa ser igual ao que o dono viu ao autorizar.
+    // Mudou depois da autorização: recusa, zero chamadas, e a autorização cai (o dono autoriza de novo).
+    if (chave.getString('payload_autorizado') !== JSON.stringify(payload)) {
+      chave.set('ligada', false)
+      chave.set('escopo', '')
+      chave.set('payload_autorizado', '')
+      $app.save(chave)
+      return e.json(409, {
+        erro: 'pedido_alterado_apos_autorizacao',
+        mensagem: 'o pedido mudou depois da autorização do dono; confira e autorize de novo',
+      })
+    }
     const appKey = $secrets.get('OMIE_APP_KEY')
     const appSecret = $secrets.get('OMIE_APP_SECRET')
     if (!appKey || !appSecret) return e.badRequestError('credencial_ausente')
@@ -182,9 +194,19 @@ routerAdd(
     }
 
     // 5. A chave desliga antes da chamada.
-    chave.set('ligada', false)
-    chave.set('escopo', '')
-    $app.save(chave)
+    // Se a chave não desligar, nada foi enviado: o vínculo volta a "falhou sem efeito" e a nova
+    // tentativa fica liberada (com nova autorização), em vez de travar em "enviando".
+    try {
+      chave.set('ligada', false)
+      chave.set('escopo', '')
+      chave.set('payload_autorizado', '')
+      $app.save(chave)
+    } catch (_) {
+      const volta = $app.findRecordById('pcp_pedidos_compra_vinculo', vinculo.id)
+      volta.set('estado', 'falhou_sem_efeito')
+      $app.save(volta)
+      return e.json(500, { erro: 'chave_nao_desligou', estado: 'falhou_sem_efeito' })
+    }
 
     // 6. Uma única chamada que grava.
     let chegou = false

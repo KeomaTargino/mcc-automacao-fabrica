@@ -480,6 +480,7 @@ export type ResultadoEdicao =
   | { ok: true; requisicao: Requisicao }
   | { ok: false; http: 403; erro: 'sem_permissao' }
   | { ok: false; http: 409; erro: 'conflito_de_versao' | 'estado_nao_permite' }
+  | { ok: false; http: 422; erro: 'quantidade_invalida' }
 
 /** Altera a quantidade de um item. Versão esperada obrigatória (409 se outra alteração chegou antes). */
 export function alterarQuantidade(entrada: {
@@ -492,6 +493,8 @@ export function alterarQuantidade(entrada: {
   if (!exigirAcao(entrada.perfil, 'editar_requisicao').permitido)
     return { ok: false, http: 403, erro: 'sem_permissao' }
   const r = entrada.requisicao
+  if (!Number.isFinite(entrada.quantidadeEstoque) || entrada.quantidadeEstoque <= 0)
+    return { ok: false, http: 422, erro: 'quantidade_invalida' }
   if (r.versao !== entrada.versaoEsperada)
     return { ok: false, http: 409, erro: 'conflito_de_versao' }
   if (r.estado === 'cancelada' || r.estado === 'recusada')
