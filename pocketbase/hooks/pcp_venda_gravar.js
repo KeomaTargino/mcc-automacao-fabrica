@@ -61,6 +61,7 @@ routerAdd(
       } catch (_) {}
       if (!prep || prep.getString('liberacao_hash') === '')
         return e.json(409, { erro: 'nao_esta_liberado' })
+      if (prep.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
       const peso = Number(prep.get('peso_bruto') || 0)
       payload = {
         operacao: 'alterar_volumes_frete',
@@ -76,6 +77,7 @@ routerAdd(
     } else {
       if (!manual)
         return e.json(422, { erro: 'payload_invalido', motivo: 'pedido manual inexistente' })
+      if (manual.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
       const est = manual.getString('estado')
       if (
         !(

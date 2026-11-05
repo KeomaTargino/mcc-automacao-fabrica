@@ -37,6 +37,7 @@ routerAdd(
       req = $app.findRecordById('pcp_requisicoes', String(body.requisicao || ''))
     } catch (_) {}
     if (!req || !hashVisto) return e.json(422, { erro: 'requisicao_e_hash_visto_obrigatorios' })
+    if (req.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
 
     let itens = []
     try {

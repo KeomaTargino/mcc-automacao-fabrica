@@ -61,13 +61,16 @@ routerAdd(
 
     // a ordem precisa existir
     let ordemExiste = false
+    let produtoDaOrdem = ''
     for (const p of $app.findRecordsByFilter('pcp_programacoes', '', '-versao', 200, 0)) {
       let ops = []
       try {
         ops = JSON.parse(p.getString('ops') || '[]') || []
       } catch (_) {}
-      if (ops.some((o) => o.op_id === opId)) {
+      const achada = ops.find((o) => o.op_id === opId)
+      if (achada) {
         ordemExiste = true
+        produtoDaOrdem = String(achada.produto || '')
         break
       }
     }
@@ -166,8 +169,11 @@ routerAdd(
           }
         }
       }
-      const pendencias =
-        quantidadeFinal === 0
+      // Conta de teste ou produto de demonstração: aprova e registra, mas não prepara ordem (CA-4-34).
+      const demo = perfil.getBool('teste') || /DEMO|^COOKIE-1$|^INS-\d+$/i.test(produtoDaOrdem)
+      const pendencias = demo
+        ? ['registro_de_demonstracao: nenhuma ordem preparada; nunca vai ao Omie']
+        : quantidadeFinal === 0
           ? ['quantidade_final_zero: nenhuma ordem preparada; decisão do PCP permanece pendente']
           : []
       const ap = new Record(tx.findCollectionByNameOrId('pcp_aprovacoes_consolidacao'))
@@ -180,10 +186,11 @@ routerAdd(
       ap.set('hash_eventos', hashEventos)
       ap.set('hash_conferencias', hashConferencias)
       ap.set('estado', 'ativa')
+      ap.set('demonstracao', demo)
       ap.set('pendencias', JSON.stringify(pendencias))
       tx.save(ap)
       let ordem = null
-      if (quantidadeFinal > 0) {
+      if (quantidadeFinal > 0 && !demo) {
         const payload = {
           operacao: 'concluir_op',
           nCodOP: null,

@@ -74,6 +74,8 @@ export interface AprovacaoEntrada {
   data_conclusao: string
   expedicao: number | null
   camara: number | null
+  /** Conta de teste ou produto de demonstração: aprova e registra, mas não prepara ordem. */
+  demonstracao?: boolean
 }
 
 export type DecisaoAprovacao =
@@ -121,6 +123,12 @@ export function decidirAprovacao(e: AprovacaoEntrada): DecisaoAprovacao {
       erro: 'conferencia_ausente',
       motivo:
         'registre a conferência de expedição e a de câmara antes de aprovar (ausência nunca vira 0)',
+    }
+  if (e.demonstracao === true)
+    return {
+      ok: true,
+      ordem: null,
+      pendencias: ['registro_de_demonstracao: nenhuma ordem preparada; nunca vai ao Omie'],
     }
   if (e.quantidade_final === 0)
     return {

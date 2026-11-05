@@ -37,6 +37,14 @@ routerAdd(
     const transacaoId = String(body.transacao_id || '')
     if (!transacaoId) return e.badRequestError('transacao_id_obrigatorio')
 
+    // Registro de demonstração nunca é enviado, com a chave ligada ou desligada (SPEC-4-001, CA-4-34).
+    try {
+      const demo = $app.findFirstRecordByFilter('pcp_transacoes_omie', 'transacao_id = {:t}', {
+        t: transacaoId,
+      })
+      if (demo.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
+    } catch (_) {}
+
     // 2. Chave: desligada (ou para outra transação) = 423 e nenhuma chamada.
     let chave = null
     try {

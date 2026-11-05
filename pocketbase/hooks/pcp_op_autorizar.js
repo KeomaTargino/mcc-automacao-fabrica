@@ -49,6 +49,10 @@ routerAdd(
         resultado = { http: 404, corpo: { erro: 'transacao_inexistente' } }
         return
       }
+      if (t.getBool('demonstracao')) {
+        resultado = { http: 422, corpo: { erro: 'registro_de_demonstracao' } }
+        return
+      }
       let chave = null
       try {
         chave = tx.findFirstRecordByFilter('pcp_chaves_escrita', 'chave = {:c}', {

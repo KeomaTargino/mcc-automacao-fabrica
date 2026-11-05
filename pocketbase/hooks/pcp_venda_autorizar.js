@@ -47,6 +47,7 @@ routerAdd(
       } catch (_) {}
       if (!prep || prep.getString('liberacao_hash') === '')
         return e.json(409, { erro: 'nao_esta_liberado' })
+      if (prep.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
       let cod = pedido
       try {
         cod = $app
@@ -69,6 +70,7 @@ routerAdd(
         m = $app.findFirstRecordByFilter('pcp_pedidos_manuais', 'pedido_id = {:p}', { p: pedido })
       } catch (_) {}
       if (!m) return e.json(422, { erro: 'payload_invalido', motivo: 'pedido manual inexistente' })
+      if (m.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
       const est = m.getString('estado')
       if (
         !(

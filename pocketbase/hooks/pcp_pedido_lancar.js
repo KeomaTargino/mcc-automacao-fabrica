@@ -41,6 +41,7 @@ routerAdd(
       req = $app.findRecordById('pcp_requisicoes', String(body.requisicao || ''))
     } catch (_) {}
     if (!req) return e.json(422, { erro: 'requisicao_inexistente' })
+    if (req.getBool('demonstracao')) return e.json(422, { erro: 'registro_de_demonstracao' })
 
     let itens = []
     try {
