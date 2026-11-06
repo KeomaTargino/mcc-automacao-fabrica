@@ -29,7 +29,8 @@ routerAdd(
       !perfil ||
       !perfil.getBool('ativo') ||
       !Array.isArray(acoes) ||
-      acoes.indexOf('aprovar_consolidacao') === -1
+      acoes.indexOf('aprovar_consolidacao') === -1 ||
+      perfil.getStringSlice('areas').indexOf('painel') === -1
     ) {
       return e.forbiddenError('sem_permissao')
     }

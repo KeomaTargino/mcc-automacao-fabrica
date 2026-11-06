@@ -23,7 +23,8 @@ routerAdd(
       !perfil ||
       !perfil.getBool('ativo') ||
       !Array.isArray(acoes) ||
-      acoes.indexOf('publicar_programacao') === -1
+      acoes.indexOf('publicar_programacao') === -1 ||
+      perfil.getStringSlice('areas').indexOf('planejamento') === -1
     ) {
       return e.forbiddenError('sem_permissao')
     }

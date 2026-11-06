@@ -34,7 +34,11 @@ routerAdd(
       'conferir_expedicao',
       'conferir_camara',
     ].some((a) => Array.isArray(acoes) && acoes.indexOf(a) !== -1)
-    if (!perfil || !perfil.getBool('ativo') || (!temAcao && pontos.length === 0)) {
+    const areasEstado = perfil ? perfil.getStringSlice('areas') : []
+    const temArea = ['planejamento', 'apontar_producao', 'conferir_expedicao', 'painel'].some(
+      (a) => areasEstado.indexOf(a) !== -1,
+    )
+    if (!perfil || !perfil.getBool('ativo') || !temArea || (!temAcao && pontos.length === 0)) {
       return e.forbiddenError('sem_permissao')
     }
     const opId = String(e.request.url.query().get('op_id') || '').trim()

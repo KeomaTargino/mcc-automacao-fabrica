@@ -43,7 +43,8 @@ routerAdd(
       !regra ||
       !Array.isArray(acoes) ||
       acoes.indexOf(regra.acao) === -1 ||
-      pontos.indexOf(regra.ponto) === -1
+      pontos.indexOf(regra.ponto) === -1 ||
+      perfil.getStringSlice('areas').indexOf('conferir_expedicao') === -1
     ) {
       return e.forbiddenError('sem_permissao')
     }

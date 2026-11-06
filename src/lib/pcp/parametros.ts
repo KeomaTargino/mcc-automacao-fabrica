@@ -21,6 +21,8 @@ export interface RecursoParametros {
   unidade: string | null
   capacidade_fracao: number
   capacidade_por_produto: Record<string, number>
+  /** Dias da semana em que o recurso produz (0 = domingo ... 6 = sábado). Calendário aprovado junto (SPEC-4-001). */
+  dias_producao?: number[] | null
 }
 
 export interface Parametros {

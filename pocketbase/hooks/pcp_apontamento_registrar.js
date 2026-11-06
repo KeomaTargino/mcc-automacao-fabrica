@@ -29,7 +29,13 @@ routerAdd(
       }
     }
     const ponto = String(b.ponto || '')
-    if (!perfil || !perfil.getBool('ativo') || !ponto || pontos.indexOf(ponto) === -1) {
+    if (
+      !perfil ||
+      !perfil.getBool('ativo') ||
+      !ponto ||
+      pontos.indexOf(ponto) === -1 ||
+      perfil.getStringSlice('areas').indexOf('apontar_producao') === -1
+    ) {
       return e.forbiddenError('sem_permissao')
     }
     const eventoId = String(b.evento_id || '').trim()

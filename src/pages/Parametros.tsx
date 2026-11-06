@@ -25,9 +25,9 @@ const Parametros = () => {
   const [capacidade, setCapacidade] = useState('')
   const [lote, setLote] = useState('')
   const [horizonte, setHorizonte] = useState('')
-  const [recursos, setRecursos] = useState<{ nome: string; unidade: string; fracao: string }[]>([
-    { nome: 'cookies', unidade: '', fracao: '' },
-  ])
+  const [recursos, setRecursos] = useState<
+    { nome: string; unidade: string; fracao: string; dias: number[] }[]
+  >([{ nome: 'cookies', unidade: '', fracao: '', dias: [] }])
   const [mensagem, setMensagem] = useState('')
   const [carregando, setCarregando] = useState(true)
 
@@ -53,6 +53,7 @@ const Parametros = () => {
                 nome: String(x.nome ?? ''),
                 unidade: String(x.unidade ?? ''),
                 fracao: x.capacidade_fracao != null ? String(x.capacidade_fracao) : '',
+                dias: Array.isArray(x.dias_producao) ? x.dias_producao : [],
               })),
             )
           }
@@ -74,6 +75,7 @@ const Parametros = () => {
       unidade: r.unidade === '' ? null : r.unidade,
       capacidade_fracao: r.fracao === '' ? null : Number(r.fracao),
       capacidade_por_produto: {},
+      dias_producao: r.dias,
     })),
   })
 
@@ -229,12 +231,34 @@ const Parametros = () => {
                   }}
                   placeholder="fração (0–1]"
                 />
+                <div className="col-span-3 flex flex-wrap items-center gap-3 text-xs">
+                  <span className="text-muted-foreground">Dias de produção:</span>
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((nome, d) => (
+                    <label key={d} className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={r.dias.includes(d)}
+                        onChange={(e) => {
+                          const n = [...recursos]
+                          const dias = e.target.checked
+                            ? [...n[i].dias, d].sort()
+                            : n[i].dias.filter((x) => x !== d)
+                          n[i] = { ...n[i], dias }
+                          setRecursos(n)
+                        }}
+                      />
+                      {nome}
+                    </label>
+                  ))}
+                </div>
               </div>
             ))}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setRecursos([...recursos, { nome: '', unidade: '', fracao: '' }])}
+              onClick={() =>
+                setRecursos([...recursos, { nome: '', unidade: '', fracao: '', dias: [] }])
+              }
             >
               Adicionar recurso
             </Button>
