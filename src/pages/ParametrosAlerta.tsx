@@ -15,6 +15,7 @@ import {
 } from '@/services/pcp-alertas'
 import Escolha from '@/components/Escolha'
 import Aviso from '@/components/Aviso'
+import { dataEHora } from '@/lib/pcp/formato'
 
 const TIPOS_GRAV = [
   ['producao', 'Produção atrasada'],
@@ -115,7 +116,7 @@ const ParametrosAlerta = () => {
         <>
           <p className="text-xs mb-4">
             {dados.vigente
-              ? `Versão vigente ${dados.vigente.versao}, aprovada por ${dados.vigente.aprovador} em ${new Date(dados.vigente.aprovado_em).toLocaleString('pt-BR')}.`
+              ? `Versão vigente ${dados.vigente.versao}, aprovada por ${dados.vigente.aprovador} em ${dataEHora(dados.vigente.aprovado_em)}.`
               : 'Ainda sem parâmetros de alerta aprovados: nenhum alerta é calculado.'}
           </p>
           <Card className="mb-4">

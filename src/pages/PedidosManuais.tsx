@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import { criarPedidoManual } from '@/services/pcp-faturamento'
+import { toast } from 'sonner'
 
 const ESTADO: Record<string, string> = {
   registrado: 'Registrado como pedido manual. Ele segue para a fila em Preparação.',
@@ -32,14 +33,18 @@ const PedidosManuais = () => {
       motivo,
       referencia: ref,
     })
-      .then((r) => setMsg(`Pedido ${r.pedido_id}. ${ESTADO[r.estado] ?? rotuloEstado(r.estado)}`))
-      .catch((e: any) =>
-        setErro(
+      .then((r) => {
+        setMsg(`Pedido ${r.pedido_id}. ${ESTADO[r.estado] ?? rotuloEstado(r.estado)}`)
+        toast.success('Pedido manual registrado.', { duration: 4000 })
+      })
+      .catch((e: any) => {
+        const t =
           e?.status === 403
             ? mensagemDeErro(e)
-            : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível registrar agora.'),
-        ),
-      )
+            : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível registrar agora.')
+        setErro(t)
+        toast.error(t, { duration: Infinity, closeButton: true })
+      })
   }
 
   const campo = 'border rounded px-2 py-1 text-sm bg-background w-full'

@@ -12,6 +12,8 @@ import {
 } from '@/services/pcp-compras'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
+import { dataEHora } from '@/lib/pcp/formato'
+import { toast } from 'sonner'
 
 const CONTATO_VAZIO: ContatoFornecedor = { nome: '', funcao: '', telefone: '', email: '' }
 
@@ -67,6 +69,7 @@ const Fornecedores = () => {
         observacao,
       })
       setAviso(`Salvo: versão ${r.versao} do fornecedor ${r.fornecedor}.`)
+      toast.success('Salvo.', { duration: 4000 })
       setFornecedor('')
       setPrazo('')
       setObservacao('')
@@ -74,6 +77,7 @@ const Fornecedores = () => {
       carregar()
     } catch (e: any) {
       setAviso(textoDoErro(e))
+      toast.error(textoDoErro(e), { duration: Infinity, closeButton: true })
     }
   }
 
@@ -204,7 +208,7 @@ const Fornecedores = () => {
               </ul>
               {f.observacao && <p className="text-xs text-muted-foreground">{f.observacao}</p>}
               <p className="text-xs text-muted-foreground">
-                Alterado por {f.alterado_por} em {new Date(f.alterado_em).toLocaleString('pt-BR')}.
+                Alterado por {f.alterado_por} em {dataEHora(f.alterado_em)}.
               </p>
             </CardContent>
           </Card>

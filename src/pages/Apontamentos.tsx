@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/table'
 import Escolha from '@/components/Escolha'
 import Aviso from '@/components/Aviso'
+import Paginacao, { fatiar } from '@/components/Paginacao'
 
 // Apontamentos: a cozinha e o encaixotamento gravam no servidor (SPEC-4-001). O identificador do evento
 // nasce aqui e é reaproveitado no reenvio da mesma tentativa, para o servidor reconhecer a repetição.
@@ -152,6 +153,7 @@ const Apontamentos = () => {
     }
   }
 
+  const [paginaEv, setPaginaEv] = useState(1)
   const [retif, setRetif] = useState<EventoLido | null>(null)
   const [novaQtd, setNovaQtd] = useState('')
   const [motivoRetif, setMotivoRetif] = useState('')
@@ -362,54 +364,59 @@ const Apontamentos = () => {
               <p className="text-muted-foreground">Nenhum evento registrado.</p>
             )}
             {eventos.length > 0 && (
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow className="text-left text-muted-foreground">
-                    <TableHead className="pb-2">Tipo</TableHead>
-                    <TableHead className="pb-2">Item</TableHead>
-                    <TableHead className="pb-2">Qtd</TableHead>
-                    <TableHead className="pb-2">Ponto</TableHead>
-                    <TableHead className="pb-2">Autor</TableHead>
-                    <TableHead className="pb-2"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {eventos.map((e) => (
-                    <TableRow
-                      key={e.evento_id}
-                      className={retificados.has(e.evento_id) ? 'opacity-60' : ''}
-                    >
-                      <TableCell>
-                        {e.tipo}
-                        {e.retifica && (
-                          <span className="ml-1 text-xs text-muted-foreground">(retificação)</span>
-                        )}
-                        {retificados.has(e.evento_id) && (
-                          <span className="ml-1 text-xs text-muted-foreground">(retificado)</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{e.item}</TableCell>
-                      <TableCell>
-                        {e.quantidade} {e.unidade}
-                      </TableCell>
-                      <TableCell>{e.ponto}</TableCell>
-                      <TableCell className="text-xs">{e.autor}</TableCell>
-                      <TableCell>
-                        {!retificados.has(e.evento_id) && pontos.includes(e.ponto) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={enviando}
-                            onClick={() => retificar(e)}
-                          >
-                            Retificar
-                          </Button>
-                        )}
-                      </TableCell>
+              <>
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="text-left text-muted-foreground">
+                      <TableHead className="pb-2">Tipo</TableHead>
+                      <TableHead className="pb-2">Item</TableHead>
+                      <TableHead className="pb-2">Qtd</TableHead>
+                      <TableHead className="pb-2">Ponto</TableHead>
+                      <TableHead className="pb-2">Autor</TableHead>
+                      <TableHead className="pb-2"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {fatiar(eventos, paginaEv).map((e) => (
+                      <TableRow
+                        key={e.evento_id}
+                        className={retificados.has(e.evento_id) ? 'opacity-60' : ''}
+                      >
+                        <TableCell>
+                          {e.tipo}
+                          {e.retifica && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              (retificação)
+                            </span>
+                          )}
+                          {retificados.has(e.evento_id) && (
+                            <span className="ml-1 text-xs text-muted-foreground">(retificado)</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{e.item}</TableCell>
+                        <TableCell>
+                          {e.quantidade} {e.unidade}
+                        </TableCell>
+                        <TableCell>{e.ponto}</TableCell>
+                        <TableCell className="text-xs">{e.autor}</TableCell>
+                        <TableCell>
+                          {!retificados.has(e.evento_id) && pontos.includes(e.ponto) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={enviando}
+                              onClick={() => retificar(e)}
+                            >
+                              Retificar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Paginacao total={eventos.length} pagina={paginaEv} onPagina={setPaginaEv} />
+              </>
             )}
           </CardContent>
         </Card>

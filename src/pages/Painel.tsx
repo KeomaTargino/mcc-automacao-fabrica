@@ -21,9 +21,9 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
+import { dataEHora } from '@/lib/pcp/formato'
 
-const fmtData = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleString('pt-BR') : '—'
+const fmtData = (iso: string | null | undefined) => (iso ? dataEHora(iso) : '—')
 
 function MetaFonte({
   meta,
@@ -144,7 +144,7 @@ const Painel = () => {
       </ComoFunciona>
       {resposta?.gerado_em && (
         <p className="text-xs text-muted-foreground mb-4">
-          Gerado em {new Date(resposta.gerado_em).toLocaleString('pt-BR')}
+          Gerado em {dataEHora(resposta.gerado_em)}
         </p>
       )}
 

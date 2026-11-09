@@ -248,7 +248,7 @@ const Catalogo = () => {
           <CardHeader>
             <CardTitle className="text-base">
               Produtos do Omie — {dados.total} registro(s) · atualizado{' '}
-              {dados.atualizado_em ? new Date(dados.atualizado_em).toLocaleString('pt-BR') : '—'}
+              {dados.atualizado_em ? dataEHora(dados.atualizado_em) : '—'}
             </CardTitle>
           </CardHeader>
           <CardContent>

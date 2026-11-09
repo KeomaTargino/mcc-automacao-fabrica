@@ -20,9 +20,9 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
-
-const moeda = (n: number | null) =>
-  n === null ? 'pendente' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import Selo from '@/components/Selo'
+import { data as formatarData, dataEHora, moeda } from '@/lib/pcp/formato'
+import Paginacao, { fatiar } from '@/components/Paginacao'
 
 const ROTULO_ESTADO: Record<string, string> = {
   comparavel: 'comparável',
@@ -41,6 +41,7 @@ const ROTULO_CLASSE: Record<string, string> = {
 const HistoricoPrecos = () => {
   const [dados, setDados] = useState<RespostaHistorico | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [pagina, setPagina] = useState(1)
   const [aviso, setAviso] = useState<string | null>(null)
   const [item, setItem] = useState('')
   const [de, setDe] = useState('')
@@ -125,7 +126,7 @@ const HistoricoPrecos = () => {
           {dados && (
             <p className="text-xs text-muted-foreground">
               {dados.ultima_atualizacao
-                ? `Última atualização: ${new Date(dados.ultima_atualizacao).toLocaleString('pt-BR')}.`
+                ? `Última atualização: ${dataEHora(dados.ultima_atualizacao)}.`
                 : 'Ainda não há pedidos de compra lidos do Omie.'}{' '}
               A classificar: {dados.pendencias.a_classificar}. Preços pendentes:{' '}
               {dados.pendencias.sem_preco}.
@@ -188,13 +189,13 @@ const HistoricoPrecos = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dados.registros.map((r) => (
+                  {fatiar(dados.registros, pagina).map((r) => (
                     <TableRow
                       key={r.chave}
                       className={`border-b align-top ${r.estado === 'comparavel' ? '' : 'text-muted-foreground'}`}
                     >
                       <TableCell className="py-2 pr-3">
-                        {r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                        {r.data ? formatarData(r.data) : '—'}
                       </TableCell>
                       <TableCell className="py-2 pr-3">{r.fornecedor ?? '—'}</TableCell>
                       <TableCell className="py-2 pr-3 font-mono">{r.pedido_id}</TableCell>
@@ -206,14 +207,13 @@ const HistoricoPrecos = () => {
                         {r.preco !== null && r.unidade ? ` / ${r.unidade}` : ''}
                       </TableCell>
                       <TableCell className="py-2">
-                        <Badge variant="outline">
-                          {ROTULO_ESTADO[r.estado] ?? rotuloEstado(r.estado)}
-                        </Badge>
+                        <Selo estado={r.estado} rotulo={ROTULO_ESTADO[r.estado]} />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              <Paginacao total={dados.registros.length} pagina={pagina} onPagina={setPagina} />
             </div>
           )}
           {dados.documentos.length > 0 && (

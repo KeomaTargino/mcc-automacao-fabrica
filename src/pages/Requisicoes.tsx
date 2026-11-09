@@ -22,9 +22,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
 import Confirmar from '@/components/Confirmar'
 import { toast } from 'sonner'
-
-const moeda = (n: number | null) =>
-  n === null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import Selo from '@/components/Selo'
+import { dataEHora, moeda } from '@/lib/pcp/formato'
 
 const ESTADOS: Record<string, string> = {
   rascunho: 'rascunho',
@@ -261,7 +260,7 @@ const Requisicoes = () => {
                 <CardHeader>
                   <CardTitle className="text-base flex flex-wrap items-center gap-2">
                     <span>Necessária até {r.data_necessaria}</span>
-                    <Badge variant="outline">{ESTADOS[r.estado] ?? rotuloEstado(r.estado)}</Badge>
+                    <Selo estado={r.estado} rotulo={ESTADOS[r.estado]} />
                     {r.emergencial && (
                       <Badge className="bg-destructive/10 text-destructive border-destructive/30">
                         emergencial: {r.motivo_emergencia}
@@ -529,7 +528,7 @@ const Requisicoes = () => {
                   {r.aprovacoes.map((a, i) => (
                     <div key={i} className="text-xs text-muted-foreground">
                       {a.decisao === 'aprovada' ? 'Aprovada' : 'Recusada'} por {a.aprovador} em{' '}
-                      {new Date(a.hora).toLocaleString('pt-BR')} — {moeda(a.valor)}
+                      {dataEHora(a.hora)} — {moeda(a.valor)}
                       {a.alcada_usada !== null ? `, alçada até ${moeda(a.alcada_usada)}` : ''}
                       {a.motivo ? `, motivo: ${a.motivo}` : ''}
                       {!a.valida && ' — invalidada por mudança depois da decisão'}

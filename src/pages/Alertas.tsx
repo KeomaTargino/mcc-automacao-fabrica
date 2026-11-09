@@ -21,6 +21,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import Escolha from '@/components/Escolha'
 import Aviso from '@/components/Aviso'
+import Selo from '@/components/Selo'
+import { dataEHora } from '@/lib/pcp/formato'
 
 const TIPO: Record<string, string> = {
   estoque: 'Estoque',
@@ -96,7 +98,7 @@ const Cartao = ({
   return (
     <div className="rounded-md border p-3 space-y-1 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">{ESTADO[a.estado] ?? rotuloEstado(a.estado)}</Badge>
+        <Selo estado={a.estado} rotulo={ESTADO[a.estado]} />
         {a.gravidade === 'critico' ? (
           <Badge className="bg-destructive/10 text-destructive border-destructive/30">
             crítico
@@ -119,14 +121,13 @@ const Cartao = ({
         ))}
       </div>
       <div className="text-xs text-muted-foreground">
-        Dado de {new Date(a.dado_em).toLocaleString('pt-BR')} · aberto em{' '}
-        {new Date(a.aberto_em).toLocaleString('pt-BR')} · atualizado {a.atualizacoes}{' '}
-        {a.atualizacoes === 1 ? 'vez' : 'vezes'} · parâmetros v{a.versao_parametros}
+        Dado de {dataEHora(a.dado_em)} · aberto em {dataEHora(a.aberto_em)} · atualizado{' '}
+        {a.atualizacoes} {a.atualizacoes === 1 ? 'vez' : 'vezes'} · parâmetros v
+        {a.versao_parametros}
       </div>
       {a.estado === 'tratado' && (
         <div className="text-xs">
-          Tratado por {a.tratado_por} em{' '}
-          {a.tratado_em ? new Date(a.tratado_em).toLocaleString('pt-BR') : ''}:{' '}
+          Tratado por {a.tratado_por} em {a.tratado_em ? dataEHora(a.tratado_em) : ''}:{' '}
           {a.acao?.replace(/_/g, ' ')}
           {a.acao_texto ? ` — ${a.acao_texto}` : ''}
         </div>
@@ -187,7 +188,7 @@ const Cartao = ({
           {historico.length === 0 && <li>Sem registros ainda.</li>}
           {historico.map((h, i) => (
             <li key={i}>
-              {new Date(h.em).toLocaleString('pt-BR')} — {h.autor} {EVENTO[h.evento] ?? h.evento}
+              {dataEHora(h.em)} — {h.autor} {EVENTO[h.evento] ?? h.evento}
               {h.detalhe ? `: ${h.detalhe.replace(/_/g, ' ')}` : ''} (ocorrência {h.ocorrencia})
             </li>
           ))}
@@ -269,7 +270,7 @@ const Alertas = () => {
         )}
         {dados?.ultima_rodada && (
           <span className="text-xs text-muted-foreground">
-            Última atualização: {new Date(dados.ultima_rodada).toLocaleString('pt-BR')}
+            Última atualização: {dataEHora(dados.ultima_rodada)}
           </span>
         )}
       </div>

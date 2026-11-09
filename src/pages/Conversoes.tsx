@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
+import { data as formatarData } from '@/lib/pcp/formato'
+import { toast } from 'sonner'
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
@@ -66,10 +68,12 @@ const Conversoes = () => {
         fator: Number(fator),
       })
       setAviso(`Salvo: versão ${r.versao} do fator de ${r.item} (estoque em ${r.unidade_estoque}).`)
+      toast.success('Salvo.', { duration: 4000 })
       setFator('')
       carregar()
     } catch (e: any) {
       setAviso(textoDoErro(e))
+      toast.error(textoDoErro(e), { duration: Infinity, closeButton: true })
     }
   }
 
@@ -188,7 +192,7 @@ const Conversoes = () => {
                     {c.versao} {c.vigente && <Badge variant="outline">vigente</Badge>}
                   </TableCell>
                   <TableCell className="py-2">
-                    {c.confirmado_por}, {new Date(c.confirmado_em).toLocaleDateString('pt-BR')}
+                    {c.confirmado_por}, {formatarData(c.confirmado_em)}
                   </TableCell>
                 </TableRow>
               ))}

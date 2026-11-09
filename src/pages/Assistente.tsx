@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { perguntarAoAssistente, type RespostaAssistente } from '@/services/pcp-assistente'
+import { dataEHora } from '@/lib/pcp/formato'
 
 interface Troca {
   pergunta: string
@@ -106,9 +107,7 @@ const Assistente = () => {
                       {t.resposta.fontes.map((f) => (
                         <div key={f.nome}>
                           Fonte: {f.nome} · período: {f.periodo} · atualizado em{' '}
-                          {f.atualizadoEm
-                            ? new Date(f.atualizadoEm).toLocaleString('pt-BR')
-                            : 'sem registro'}
+                          {f.atualizadoEm ? dataEHora(f.atualizadoEm) : 'sem registro'}
                         </div>
                       ))}
                       {t.resposta.limites.map((l) => (
