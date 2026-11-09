@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import {
   autorizarOp,
   conferirOp,
@@ -29,16 +31,6 @@ const ROTULO_CONFERENCIA: Record<string, string> = {
   inconclusivo: 'Inconclusivo: nenhuma nova gravação',
 }
 
-const mensagemDeErro = (err: any): string => {
-  const d = err?.response ?? err?.data
-  return (
-    d?.mensagem ||
-    d?.motivo ||
-    d?.message ||
-    'Não foi possível concluir agora. Tente de novo em instantes.'
-  )
-}
-
 const EnvioOmie = () => {
   const [dados, setDados] = useState<RespostaFilaOp | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -54,7 +46,7 @@ const EnvioOmie = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar a fila agora. Tente de novo em instantes.',
         ),
       )
@@ -81,10 +73,15 @@ const EnvioOmie = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Envio da produção ao Omie</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        O dono autoriza uma ordem de cada vez, vendo exatamente o que será gravado. Sem autorização,
-        nada é gravado no Omie. Depois do envio, o sistema só lê o Omie para conferir.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        O dono autoriza uma ordem de cada vez, vendo exatamente o que será gravado.
       </p>
+      <ComoFunciona>
+        <p>
+          Sem autorização, nada é gravado no Omie. Depois do envio, o sistema só lê o Omie para
+          conferir.
+        </p>
+      </ComoFunciona>
 
       {erro && (
         <div
@@ -129,11 +126,8 @@ const EnvioOmie = () => {
           <Card key={i.transacao_id}>
             <CardHeader>
               <CardTitle className="text-base flex items-center justify-between gap-2">
-                <span>
-                  Ordem {i.ordem || i.op_id}{' '}
-                  <span className="font-mono text-xs">({i.transacao_id})</span>
-                </span>
-                <Badge variant="outline">{ROTULO_ESTADO[i.estado] ?? i.estado}</Badge>
+                <span>Ordem {i.ordem || i.op_id}</span>
+                <Badge variant="outline">{ROTULO_ESTADO[i.estado] ?? rotuloEstado(i.estado)}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -157,7 +151,9 @@ const EnvioOmie = () => {
                   <dd>{i.local}</dd>
                 </div>
               </dl>
-              <p className="text-xs text-muted-foreground">{i.efeito_no_estoque}</p>
+              <p className="text-xs text-muted-foreground">
+                {textoSeguro(i.efeito_no_estoque, '')}
+              </p>
               {i.autorizada_por && (
                 <p className="text-xs">
                   Autorizada por {i.autorizada_por}
@@ -222,11 +218,12 @@ const EnvioOmie = () => {
                   role="status"
                 >
                   <p className="font-medium">
-                    {ROTULO_CONFERENCIA[i.conferencia.resultado] ?? i.conferencia.resultado}
+                    {ROTULO_CONFERENCIA[i.conferencia.resultado] ??
+                      rotuloEstado(i.conferencia.resultado)}
                   </p>
                   <ul className="mt-1 list-disc list-inside">
                     {i.conferencia.detalhes.map((d, k) => (
-                      <li key={k}>{d}</li>
+                      <li key={k}>{textoSeguro(d, 'Há uma diferença para conferir.')}</li>
                     ))}
                   </ul>
                 </div>

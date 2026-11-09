@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { obterPerfil } from '@/services/pcp-access'
 import { obterParametros, aprovarParametrosServidor } from '@/services/pcp-parametros'
 import { validarParametros, type Parametros } from '@/lib/pcp/parametros'
@@ -98,19 +100,19 @@ const Parametros = () => {
           setOrigem('aprovada')
           setMensagem(
             r.estado === 'replay'
-              ? 'Replay: aprovação idêntica já registrada — nada duplicado.'
+              ? 'Já registrado: esta aprovação é igual à vigente — nada foi duplicado.'
               : `Aprovado: versão ${r.aprovacao?.versao} registrada.`,
           )
         } else if (r.estado === 'conflito_versao') {
           setMensagem(
-            `409: os parâmetros divergem da aprovação vigente (v${r.versao_atual}) — recarregue e reaprove.`,
+            `Os parâmetros divergem da aprovação vigente (versão ${r.versao_atual}). Recarregue a tela e aprove de novo.`,
           )
         } else {
-          setMensagem(`${r.estado}: ${JSON.stringify(r)}`)
+          setMensagem('Não foi possível aprovar. Confira os campos destacados.')
         }
       })
       .catch((err: any) => {
-        setMensagem(`Erro: ${err?.response?.data?.message ?? err?.message ?? String(err)}`)
+        setMensagem(mensagemDeErro(err))
       })
   }
 
@@ -119,11 +121,15 @@ const Parametros = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Parâmetros de produção</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Parâmetros oficiais (CL-006): capacidade diária, lote/múltiplo, horizonte e recursos com
-        unidade. Aprovação registra versão, aprovador e hora — reprodutível. Sem aprovação, a
-        publicação real permanece bloqueada.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Capacidade diária, lote, horizonte e recursos que valem para a programação.
       </p>
+      <ComoFunciona>
+        <p>
+          A aprovação registra a versão, quem aprovou e a hora, para que a conta possa ser refeita.
+          Sem aprovação, a programação não pode ser publicada.
+        </p>
+      </ComoFunciona>
 
       <div
         className={`mb-6 rounded-md border px-4 py-3 text-sm ${
@@ -136,13 +142,12 @@ const Parametros = () => {
         {origem === 'aprovada' ? (
           <>
             <strong>Parâmetros oficiais aprovados</strong> — versão {aprovacao?.versao} por{' '}
-            {aprovacao?.aprovador} em {aprovacao?.aprovado_em?.slice(0, 19).replace('T', ' ')} UTC
-            (hash {aprovacao?.hash_parametros?.slice(0, 8)}…).
+            {aprovacao?.aprovador} em {aprovacao?.aprovado_em?.slice(0, 19).replace('T', ' ')} UTC.
           </>
         ) : (
           <>
-            <strong>Sem aprovação vigente.</strong> Os parâmetros de demonstração continuam
-            isolados; a publicação real fica bloqueada até o PCP aprovar aqui.
+            <strong>Sem aprovação vigente.</strong> Os dados de demonstração ficam separados; a
+            programação real só pode ser publicada depois que o PCP aprovar aqui.
           </>
         )}
       </div>
@@ -153,11 +158,11 @@ const Parametros = () => {
             <span>Valores oficiais</span>
             {podeAprovar ? (
               <Badge className="bg-green-100 text-green-900 border-green-300">
-                editar_parametros ok
+                Você pode aprovar
               </Badge>
             ) : (
               <Badge variant="outline" className="border-amber-300 text-amber-900">
-                sem editar_parametros (403)
+                Você não tem acesso a esta ação. Fale com o gestor.
               </Badge>
             )}
           </CardTitle>
@@ -269,10 +274,10 @@ const Parametros = () => {
               className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
               role="alert"
             >
-              <p className="font-medium">Bloqueios (faltante nunca vira default):</p>
+              <p className="font-medium">O que falta para aprovar (nada é preenchido sozinho):</p>
               <ul className="mt-1 list-disc list-inside">
                 {validacao.bloqueios.map((b, i) => (
-                  <li key={i}>{b}</li>
+                  <li key={i}>{textoSeguro(b, 'Complete os campos destacados.')}</li>
                 ))}
               </ul>
             </div>
@@ -286,9 +291,6 @@ const Parametros = () => {
               {mensagem}
             </div>
           )}
-          <p className="text-xs text-muted-foreground" role="note">
-            Ações do seu perfil (servidor): {acoes.length > 0 ? acoes.join(', ') : 'carregando…'}.
-          </p>
         </CardContent>
       </Card>
     </div>

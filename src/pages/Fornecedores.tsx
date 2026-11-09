@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   obterFornecedores,
   salvarFornecedor,
@@ -13,8 +15,11 @@ const CONTATO_VAZIO: ContatoFornecedor = { nome: '', funcao: '', telefone: '', e
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
-  if (Array.isArray(d?.motivos)) return d.motivos.join('; ')
-  return d?.motivo || d?.message || 'Não foi possível salvar agora. Tente de novo em instantes.'
+  if (Array.isArray(d?.motivos))
+    return textoSeguro(d.motivos.join('; '), 'Confira os campos destacados.')
+  return e?.status
+    ? mensagemDeErro(e)
+    : 'Não foi possível salvar agora. Tente de novo em instantes.'
 }
 
 const Fornecedores = () => {
@@ -35,7 +40,7 @@ const Fornecedores = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar os fornecedores agora. Tente de novo em instantes.',
         ),
       )
@@ -73,11 +78,15 @@ const Fornecedores = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Fornecedores</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Contatos e prazo de entrega de cada fornecedor, cada dado no seu campo. O cadastro do Omie
-        não é alterado por esta tela. Cada alteração vira uma versão nova, com quem alterou e
-        quando.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Contatos e prazo de entrega de cada fornecedor.
       </p>
+      <ComoFunciona>
+        <p>
+          Cada dado fica no seu campo. O cadastro do Omie não é alterado por esta tela. Cada
+          alteração vira uma versão nova, com quem alterou e quando.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -92,8 +101,8 @@ const Fornecedores = () => {
           className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900"
           role="status"
         >
-          {dados.leitura_omie}. Enquanto isso, o fornecedor é identificado pelo código que vem no
-          pedido de compra.
+          {textoSeguro(dados.leitura_omie, 'A lista de fornecedores do Omie ainda não foi lida')}.
+          Enquanto isso, o fornecedor é identificado pelo código que vem no pedido de compra.
         </div>
       )}
       {aviso && (

@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { linhasConsolidacao, type EstadoParaFila } from '@/lib/pcp/conferencia-servidor'
 import { lerEstadoProducao } from '@/services/pcp-producao'
+import ComoFunciona from '@/components/ComoFunciona'
+import { rotuloEstado, semInformacao, textoSeguro } from '@/lib/pcp/textos'
 
 // Consolidações: só leitura (SPEC-4-001). Mostra a ordem, as conferências de expedição e de câmara, a
 // aprovação e o estado da ordem preparada, lidos do servidor. Não há botão de envio: o envio ao Omie é a
@@ -38,11 +40,17 @@ const Consolidacoes = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Consolidações</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Cada ordem programada com as conferências de expedição e de câmara, a aprovação do PCP e o
-        estado da ordem de conclusão preparada. Só leitura: a aprovação é feita em Conferências e o
-        envio ao Omie, em Envio ao Omie.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Cada ordem programada com as conferências, a aprovação do PCP e a ordem de conclusão. Só
+        leitura.
       </p>
+      <ComoFunciona>
+        <p>
+          A tela junta as conferências de expedição e de câmara, a aprovação do PCP e o estado da
+          ordem de conclusão preparada.
+        </p>
+        <p>A aprovação é feita em Conferências e o envio ao Omie, em Envio da produção ao Omie.</p>
+      </ComoFunciona>
 
       {erroCarga && (
         <div
@@ -83,25 +91,27 @@ const Consolidacoes = () => {
                         : 'border-slate-300 text-slate-700'
                   }
                 >
-                  {l.situacao}
+                  {textoSeguro(l.situacao, 'Em acompanhamento')}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               <p>
-                Expedição: <strong>{l.expedicao === null ? 'ausente' : `${l.expedicao} UN`}</strong>{' '}
-                · Câmara: <strong>{l.camara === null ? 'ausente' : `${l.camara} UN`}</strong>
+                Expedição:{' '}
+                <strong>{l.expedicao === null ? semInformacao() : `${l.expedicao} UN`}</strong> ·
+                Câmara: <strong>{l.camara === null ? semInformacao() : `${l.camara} UN`}</strong>
               </p>
               {l.aprovacao && (
                 <p>
-                  Aprovação ({l.aprovacao.estado}):{' '}
+                  Aprovação ({rotuloEstado(l.aprovacao.estado)}):{' '}
                   <strong>{l.aprovacao.quantidade_final} UN</strong> por {l.aprovacao.aprovador} —{' '}
                   {l.aprovacao.motivo}
                 </p>
               )}
               {l.ordem && (
                 <p>
-                  Ordem de conclusão: <strong>{l.ordem.estado}</strong> ({l.ordem.quantidade} UN)
+                  Ordem de conclusão: <strong>{rotuloEstado(l.ordem.estado)}</strong> (
+                  {l.ordem.quantidade} UN)
                 </p>
               )}
             </CardContent>

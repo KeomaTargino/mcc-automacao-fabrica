@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   aprovarRegraSazonalidade,
   levarAntecipacaoParaRequisicao,
@@ -31,26 +33,29 @@ const HistoricoVendas = () => {
     obterHistoricoVendas({ produto, periodo, data_necessaria: dataNec })
       .then(setD)
       .catch((e: any) =>
-        setErro(
-          e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
-            : 'Não foi possível consultar agora.',
-        ),
+        setErro(e?.status === 403 ? mensagemDeErro(e) : 'Não foi possível consultar agora.'),
       )
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Histórico de vendas e sazonalidade</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        O mês escolhido ao lado do mesmo mês dos anos anteriores, com a cobertura de cada ciclo.
-        Sazonalidade só aparece quando o histórico cumpre a regra aprovada pelo PCP; senão fica
-        "histórico insuficiente". É contexto e sugestão: o cálculo das sugestões não muda, nada é
-        comprado e a diferença de vendas não é tratada como perda.{' '}
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        O mês escolhido ao lado do mesmo mês dos anos anteriores.{' '}
         <Link to="/sugestoes" className="underline">
           Ver as sugestões
         </Link>
       </p>
+      <ComoFunciona>
+        <p>
+          Cada ciclo mostra a cobertura do histórico. A sazonalidade só aparece quando o histórico
+          cumpre a regra aprovada pelo PCP; senão fica “histórico insuficiente”.
+        </p>
+        <p>
+          É contexto e sugestão: o cálculo das sugestões não muda, nada é comprado e a diferença de
+          vendas não é tratada como perda.
+        </p>
+      </ComoFunciona>
       <div className="mb-4 flex flex-wrap items-end gap-3 text-sm">
         <label className="block">
           Produto (código)
@@ -127,7 +132,8 @@ const HistoricoVendas = () => {
                 </div>
               ))}
               <div className="text-xs text-muted-foreground">
-                {d.mensagem}. {d.meses_lidos} meses lidos do Omie até agora.
+                {textoSeguro(d.mensagem, 'Histórico em leitura')}. {d.meses_lidos} meses lidos do
+                Omie até agora.
                 {d.regra
                   ? ` Regra v${d.regra.versao}: ${d.regra.ciclosMinimos} ciclos com cobertura de ${d.regra.coberturaMinimaPct}% ou mais.`
                   : ''}
@@ -139,7 +145,7 @@ const HistoricoVendas = () => {
               <CardTitle className="text-base">Sugestão de antecipação da compra</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <div>{d.antecipacao.texto}</div>
+              <div>{textoSeguro(d.antecipacao.texto, 'Sem sugestão de antecipação agora.')}</div>
               {d.antecipacao.sugerir && (
                 <div className="flex flex-wrap items-center gap-2">
                   <input
@@ -166,13 +172,13 @@ const HistoricoVendas = () => {
                               ? 'Requisição criada em rascunho; nada foi comprado.'
                               : r.ja_existiam
                                 ? 'Esta sugestão já virou requisição.'
-                                : r.bloqueados?.[0]?.mensagem || 'Nada foi criado.',
+                                : textoSeguro(r.bloqueados?.[0]?.mensagem, 'Nada foi criado.'),
                           ),
                         )
                         .catch((e: any) =>
                           setMsg(
                             e?.status === 403
-                              ? 'Sua conta não pode criar requisição.'
+                              ? mensagemDeErro(e)
                               : 'Não foi possível criar a requisição agora.',
                           ),
                         )
@@ -230,7 +236,10 @@ const HistoricoVendas = () => {
                       })
                       .catch((e: any) =>
                         setMsg(
-                          e?.response?.motivos?.join(' ') || 'Não foi possível aprovar agora.',
+                          textoSeguro(
+                            e?.response?.motivos?.join(' '),
+                            'Não foi possível aprovar agora.',
+                          ),
                         ),
                       )
                   }

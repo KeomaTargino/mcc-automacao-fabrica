@@ -10,6 +10,8 @@ import {
 } from '@/services/pcp-catalogo'
 import { obterPiloto, type RespostaPiloto } from '@/services/pcp-piloto'
 import { conciliarProduto } from '@/lib/pcp/conciliacao'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, semInformacao, textoSeguro } from '@/lib/pcp/textos'
 
 const Catalogo = () => {
   const [piloto, setPiloto] = useState<RespostaPiloto | null>(null)
@@ -29,8 +31,8 @@ const Catalogo = () => {
         setDados(r)
         setCarregando(false)
       })
-      .catch(() => {
-        setErro('Falha ao consultar o catálogo (sessão expirada ou sem autorização).')
+      .catch((err: any) => {
+        setErro(mensagemDeErro(err))
         setCarregando(false)
       })
   }
@@ -79,13 +81,22 @@ const Catalogo = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Catálogo</h1>
+      <h1 className="text-3xl font-bold mb-2">Catálogo</h1>
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Produtos lidos do Omie, com unidade, família e saldo por local.
+      </p>
+      <ComoFunciona>
+        <p>
+          Nada é preenchido sozinho: o que o Omie não informa aparece como “sem informação”. A ficha
+          técnica só aparece quando o Omie a entrega por esta conexão.
+        </p>
+      </ComoFunciona>
 
       {piloto && piloto.disponivel && pilotoConciliado && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base">
-              Piloto real — {pilotoConciliado.descricao} ({pilotoConciliado.codigo})
+              Produto de conferência — {pilotoConciliado.descricao} ({pilotoConciliado.codigo})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -109,12 +120,10 @@ const Catalogo = () => {
             </div>
             {pilotoConciliado.bloqueios.length > 0 && (
               <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
-                <p className="font-medium">
-                  Bloqueios de qualidade (nada é preenchido por padrão):
-                </p>
+                <p className="font-medium">O que está faltando (nada é preenchido sozinho):</p>
                 <ul className="mt-1 list-disc list-inside">
                   {pilotoConciliado.bloqueios.map((b) => (
-                    <li key={b}>{b}</li>
+                    <li key={b}>{textoSeguro(b, 'Falta um dado oficial.')}</li>
                   ))}
                 </ul>
               </div>
@@ -122,7 +131,7 @@ const Catalogo = () => {
             {pilotoConciliado.ficha && pilotoConciliado.ficha.itens.length > 0 && (
               <div className="mt-3">
                 <p className="font-medium mb-1 text-sm">
-                  Ficha técnica (verbatim da fonte — sem conversão):
+                  Ficha técnica (como está no Omie, sem conversão):
                 </p>
                 <table className="w-full text-sm">
                   <thead>
@@ -174,8 +183,9 @@ const Catalogo = () => {
           className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="status"
         >
-          Piloto indisponível com dado oficial — nada foi inventado. Motivo: {piloto.motivo}
-          {piloto.detalhe ? ` (${piloto.detalhe})` : ''}
+          Produto de conferência indisponível — nada foi inventado. Motivo:{' '}
+          {textoSeguro(piloto.motivo, 'não foi possível consultar agora.')}
+          {piloto.detalhe ? ` (${textoSeguro(piloto.detalhe, '')})` : ''}
         </div>
       )}
 
@@ -227,12 +237,12 @@ const Catalogo = () => {
           </p>
           <p className="mt-1">
             {dados.motivo === 'cadastro_omnie_vazio'
-              ? 'O cadastro de produtos do Omie está VAZIO nesta conta (0 registros). O painel fica pronto e passa a listar automaticamente quando o cadastro for povoado no ERP.'
-              : 'Sem lote ativo de produtos no momento.'}
+              ? 'O cadastro de produtos do Omie está vazio nesta conta. Quando for preenchido, a lista aparece aqui.'
+              : 'Ainda não há produtos carregados.'}
           </p>
           {(dados.pendencias || []).map((p, i) => (
             <p key={i} className="mt-1 text-amber-800">
-              {p}
+              {textoSeguro(p, 'Há uma pendência neste cadastro.')}
             </p>
           ))}
         </div>
@@ -242,8 +252,7 @@ const Catalogo = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Produtos do Omie — {dados.total} registro(s) · lote {dados.lote_ativo?.slice(0, 8)} ·
-              atualizado{' '}
+              Produtos do Omie — {dados.total} registro(s) · atualizado{' '}
               {dados.atualizado_em ? new Date(dados.atualizado_em).toLocaleString('pt-BR') : '—'}
             </CardTitle>
           </CardHeader>
@@ -268,7 +277,7 @@ const Catalogo = () => {
                       <td className="py-1">{p.codigo}</td>
                       <td>{p.descricao}</td>
                       <td>
-                        {p.unidade || <span className="text-amber-700">unidade ausente</span>}
+                        {p.unidade || <span className="text-amber-700">{semInformacao()}</span>}
                       </td>
                       <td>{p.ativo === 'S' ? 'Sim' : 'Não'}</td>
                       <td>{p.familia}</td>
@@ -289,7 +298,7 @@ const Catalogo = () => {
               <p className="text-sm text-muted-foreground">
                 {buscaAplicada
                   ? 'Nenhum produto encontrado para a busca.'
-                  : 'Lote ativo sem produtos (cadastro vazio na origem).'}
+                  : 'Ainda não há produtos carregados (cadastro vazio no Omie).'}
               </p>
             )}
             {dados.paginas > 1 && (
@@ -341,7 +350,7 @@ const Catalogo = () => {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Unidade:</span>{' '}
-                    {detalhe.produto.unidade || 'ausente'}
+                    {detalhe.produto.unidade || semInformacao()}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Ativo:</span>{' '}
@@ -351,26 +360,19 @@ const Catalogo = () => {
                     <span className="text-muted-foreground">Família:</span>{' '}
                     {detalhe.produto.familia || '—'}
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Lote de origem:</span>{' '}
-                    <span className="font-mono text-xs">
-                      {detalhe.produto.origem_lote?.slice(0, 8)}
-                    </span>
-                  </div>
                 </div>
                 <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
-                  Ficha técnica: <strong>indisponível nesta fase</strong> — o contrato de
-                  ficha/receita não está exposto pela API autorizada do Omie; nada é inventado (sem
-                  componentes, sem rendimento, sem conversão).
+                  Ficha técnica: <strong>ainda não disponível</strong> — o Omie não entrega a ficha
+                  por esta conexão. Nada é inventado.
                 </div>
                 {detalhe.pendencias && detalhe.pendencias.length > 0 && (
                   <div className="rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
                     <p className="font-medium">
-                      Pendências deste item (nada é preenchido por padrão):
+                      Pendências deste item (nada é preenchido sozinho):
                     </p>
                     <ul className="mt-1 list-disc list-inside">
                       {detalhe.pendencias.map((p, i) => (
-                        <li key={i}>{p}</li>
+                        <li key={i}>{textoSeguro(p, 'Há uma pendência neste item.')}</li>
                       ))}
                     </ul>
                   </div>
@@ -378,7 +380,7 @@ const Catalogo = () => {
                 {detalhe.saldo &&
                   (detalhe.saldo.disponivel ? (
                     <div>
-                      <p className="font-medium mb-1">Saldo por local (área estoque autorizada):</p>
+                      <p className="font-medium mb-1">Saldo por local:</p>
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-left text-muted-foreground">
@@ -413,9 +415,9 @@ const Catalogo = () => {
                     <div className="rounded-md border px-3 py-2 text-sm bg-muted">
                       Saldo: não exibido —{' '}
                       {detalhe.saldo.motivo === 'area_estoque_nao_autorizada'
-                        ? 'sua área não tem acesso ao estoque (catálogo não concede estoque).'
+                        ? 'seu perfil não tem acesso ao estoque.'
                         : detalhe.saldo.motivo === 'estoque_sem_lote_ativo'
-                          ? 'sem lote de estoque ativo.'
+                          ? 'ainda não há leitura de estoque.'
                           : 'sem saldo registrado para este produto.'}
                     </div>
                   ))}
@@ -423,8 +425,8 @@ const Catalogo = () => {
             ) : (
               <p className="text-sm text-muted-foreground">
                 {detalhe.motivo === 'produto_nao_encontrado'
-                  ? 'Produto não encontrado no lote ativo (pode ter saído da janela — referência preservada, sem apagar histórico).'
-                  : 'Sem lote ativo de produtos (cadastro vazio na origem).'}
+                  ? 'Produto não encontrado na leitura atual. O histórico foi preservado.'
+                  : 'Ainda não há produtos carregados (cadastro vazio no Omie).'}
               </p>
             )}
           </CardContent>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import ComoFunciona from '@/components/ComoFunciona'
+import { textoSeguro } from '@/lib/pcp/textos'
 import {
   produtosDemonstracao,
   eventosDemonstracao,
@@ -27,7 +29,7 @@ const MOTIVO_INCOMPLETO: Record<string, string> = {
   catalogo_sem_lote_ativo: 'O catálogo do Omie ainda não foi lido.',
   estoque_sem_lote_ativo: 'O estoque do Omie ainda não foi lido.',
   catalogo_nao_lido_por_inteiro:
-    'O catálogo ainda não foi lido por inteiro. Enquanto isso, a lista fica vazia para não acusar falta de produto que só não foi lido.',
+    'O catálogo ainda não foi lido por inteiro. Até lá a lista fica vazia, para não acusar produto que só não foi lido.',
 }
 
 const FaltantesOmie = () => {
@@ -124,10 +126,15 @@ const Qualidade = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Qualidade dos dados</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        O que cada cálculo pode usar hoje — e o que está bloqueado porque um dado oficial está
-        ausente ou incompleto. Nada é presumido: dado desconhecido aparece como “desconhecido”.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        O que cada cálculo pode usar hoje e o que está bloqueado por falta de dado oficial.
       </p>
+      <ComoFunciona>
+        <p>
+          Nada é presumido: dado desconhecido aparece como “desconhecido”. Um cálculo fica bloqueado
+          quando falta a unidade oficial, a ficha técnica ou histórico suficiente.
+        </p>
+      </ComoFunciona>
 
       <FaltantesOmie />
 
@@ -135,9 +142,8 @@ const Qualidade = () => {
         className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"
         role="status"
       >
-        <strong>Tela de demonstração.</strong> Os produtos abaixo são exemplos isolados (fixtures) —
-        não são produtos reais do cadastro. Quando o cadastro do Omie for povoado e as conexões
-        reais forem liberadas, esta visão passa a mostrar os dados oficiais.
+        <strong>Dados de demonstração.</strong> Os produtos abaixo são exemplos e não existem no
+        cadastro. Com o cadastro completo, esta visão mostra os dados oficiais.
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -181,7 +187,7 @@ const Qualidade = () => {
                       </span>
                     </span>
                   ) : (
-                    <span className="text-amber-700 font-medium">ausente</span>
+                    <span className="text-amber-700 font-medium">sem informação</span>
                   )}
                 </div>
                 <div>
@@ -200,7 +206,8 @@ const Qualidade = () => {
                       className={`rounded-md border px-3 py-2 text-xs ${COR_BLOQUEIO[b]}`}
                       role="alert"
                     >
-                      <strong>{ROTULO_BLOQUEIO_CURTO[b]}:</strong> {rotuloBloqueio(b)}
+                      <strong>{ROTULO_BLOQUEIO_CURTO[b]}:</strong>{' '}
+                      {textoSeguro(rotuloBloqueio(b), 'Falta um dado oficial.')}
                     </div>
                   ))}
                 </div>
@@ -224,8 +231,8 @@ const Qualidade = () => {
               {cookie.canceladas} canceladas + {cookie.devolucoes} devoluções vinculadas.
             </p>
             <p className="text-xs text-muted-foreground">
-              Cada evento entra uma única vez por chave (replay não duplica); eventos fora do
-              horizonte são excluídos ({cookie.eventos_fora_do_horizonte} nesta demonstração).
+              Cada evento entra uma única vez (repetição não duplica); eventos fora do horizonte são
+              excluídos ({cookie.eventos_fora_do_horizonte} nesta demonstração).
             </p>
           </CardContent>
         </Card>

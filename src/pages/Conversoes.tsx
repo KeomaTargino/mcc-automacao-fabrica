@@ -3,12 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { obterConversoes, salvarConversao, type RespostaConversoes } from '@/services/pcp-compras'
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
-  if (Array.isArray(d?.motivos)) return d.motivos.join('; ')
-  return d?.motivo || d?.message || 'Não foi possível salvar agora. Tente de novo em instantes.'
+  if (Array.isArray(d?.motivos))
+    return textoSeguro(d.motivos.join('; '), 'Confira os campos destacados.')
+  return e?.status
+    ? mensagemDeErro(e)
+    : 'Não foi possível salvar agora. Tente de novo em instantes.'
 }
 
 const Conversoes = () => {
@@ -30,7 +35,7 @@ const Conversoes = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar as conversões agora. Tente de novo em instantes.',
         ),
       )
@@ -61,12 +66,17 @@ const Conversoes = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Conversão de unidades</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        A quantidade de compra só vira unidade de estoque por um fator confirmado por Compras (por
-        exemplo, 1 saco de 25 kg = 25 KG). Sem fator, a quantidade fica na unidade de compra e o
-        preço não é comparado. Mudar o fator cria uma versão nova; documentos antigos mantêm o que
-        usaram.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Fatores que convertem a unidade de compra na unidade de estoque.
       </p>
+      <ComoFunciona>
+        <p>
+          A quantidade de compra só vira unidade de estoque por um fator confirmado por Compras (por
+          exemplo, 1 saco de 25 kg = 25 KG). Sem fator, a quantidade fica na unidade de compra e o
+          preço não é comparado.
+        </p>
+        <p>Mudar o fator cria uma versão nova; documentos antigos mantêm o que usaram.</p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"

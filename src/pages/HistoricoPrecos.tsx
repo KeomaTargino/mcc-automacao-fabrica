@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado } from '@/lib/pcp/textos'
 import {
   classificarLinhaPreco,
   obterHistorico,
@@ -43,7 +45,7 @@ const HistoricoPrecos = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar o histórico agora. Tente de novo em instantes.',
         ),
       )
@@ -69,11 +71,16 @@ const HistoricoPrecos = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Histórico de preços</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Preço de compra por insumo e fornecedor, sempre na unidade de estoque, vindo dos pedidos de
-        compra do Omie. Frete, serviço e N-D ficam fora do histórico do insumo, mas aparecem no
-        documento. Sem fator confirmado o preço fica na unidade de compra e fora da comparação.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Preço de compra por insumo e fornecedor, na unidade de estoque.
       </p>
+      <ComoFunciona>
+        <p>
+          Os preços vêm dos pedidos de compra do Omie. Frete, serviço e N-D ficam fora do histórico
+          do insumo, mas aparecem no documento.
+        </p>
+        <p>Sem fator confirmado o preço fica na unidade de compra e fora da comparação.</p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -192,7 +199,9 @@ const HistoricoPrecos = () => {
                         {r.preco !== null && r.unidade ? ` / ${r.unidade}` : ''}
                       </td>
                       <td className="py-2">
-                        <Badge variant="outline">{ROTULO_ESTADO[r.estado]}</Badge>
+                        <Badge variant="outline">
+                          {ROTULO_ESTADO[r.estado] ?? rotuloEstado(r.estado)}
+                        </Badge>
                       </td>
                     </tr>
                   ))}

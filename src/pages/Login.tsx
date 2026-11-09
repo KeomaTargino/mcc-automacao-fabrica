@@ -21,7 +21,7 @@ const Login = () => {
     const { error } = await signIn(email, senha)
     setEnviando(false)
     if (error) {
-      setErro('E-mail ou senha inválidos, ou sessão recusada.')
+      setErro('E-mail ou senha incorretos. Confira e tente de novo.')
       return
     }
     navigate('/')
@@ -34,6 +34,9 @@ const Login = () => {
           <CardTitle>Entrar no sistema</CardTitle>
         </CardHeader>
         <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground" data-subtitulo>
+            Use o seu e-mail e a senha que você recebeu.
+          </p>
           <form onSubmit={handleSubmit} className="space-y-4" aria-label="Formulário de login">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>

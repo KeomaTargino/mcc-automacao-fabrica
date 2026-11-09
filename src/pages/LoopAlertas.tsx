@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   configurarLoop,
   obterLoop,
@@ -34,11 +36,7 @@ const LoopAlertas = () => {
         setValid(r.config.validador ?? '')
       })
       .catch((e: any) =>
-        setErro(
-          e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
-            : 'Não foi possível carregar agora.',
-        ),
+        setErro(e?.status === 403 ? mensagemDeErro(e) : 'Não foi possível carregar agora.'),
       )
   }, [])
   useEffect(() => {
@@ -56,32 +54,44 @@ const LoopAlertas = () => {
       ...(ligar === undefined ? {} : { ligar }),
     })
       .then((r) => {
-        setMsg(r.ativo ? 'Loop ligado.' : 'Configuração salva; o loop continua desligado.')
+        setMsg(
+          r.ativo
+            ? 'Acompanhamento ligado.'
+            : 'Configuração salva; o acompanhamento continua desligado.',
+        )
         carregar()
       })
       .catch((e: any) =>
         setMsg(
           e?.status === 403
-            ? 'Sua conta não tem a ação editar parâmetros.'
+            ? mensagemDeErro(e)
             : e?.response?.faltam
-              ? `Não dá para ligar: falta ${e.response.faltam.join(', ')}. O loop continua desligado.`
-              : e?.response?.motivos?.join(' ') || 'Não foi possível salvar agora.',
+              ? `Não dá para ligar: falta ${e.response.faltam.map((f: string) => textoSeguro(f, 'uma condição')).join(', ')}. O acompanhamento continua desligado.`
+              : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível salvar agora.'),
         ),
       )
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-2">LOOP-01 — alertas críticos tratados</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Proporção do ciclo = alertas críticos tratados <strong>com ação registrada</strong> ÷
-        alertas críticos gerados no ciclo. Sem alerta crítico no ciclo, o resultado é "não
-        aplicável", nunca 100%. O loop só mede, lembra e registra o veredito do validador: não trata
-        alerta, não compra e não reprograma.{' '}
+      <h1 className="text-3xl font-bold mb-2">Alertas críticos tratados</h1>
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Quantos alertas críticos do ciclo foram tratados com ação registrada.{' '}
         <Link to="/alertas" className="underline">
           Ver os alertas
         </Link>
       </p>
+      <ComoFunciona>
+        <p>
+          Proporção do ciclo = alertas críticos tratados <strong>com ação registrada</strong> ÷
+          alertas críticos gerados no ciclo. Sem alerta crítico no ciclo, o resultado é “não
+          aplicável”, nunca 100%.
+        </p>
+        <p>
+          O acompanhamento só mede, lembra e registra o veredito do validador: não trata alerta, não
+          compra e não reprograma.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -100,9 +110,9 @@ const LoopAlertas = () => {
                   <Badge variant="outline">provisório: janela ainda não definida</Badge>
                 )}
                 {d.config.ativo ? (
-                  <Badge>loop ligado</Badge>
+                  <Badge>acompanhamento ligado</Badge>
                 ) : (
-                  <Badge variant="outline">loop desligado</Badge>
+                  <Badge variant="outline">acompanhamento desligado</Badge>
                 )}
               </CardTitle>
             </CardHeader>
@@ -115,9 +125,9 @@ const LoopAlertas = () => {
               </div>
               {!d.config.ativo && (
                 <div className="text-xs text-amber-800">
-                  Para ligar o loop falta:{' '}
+                  Para ligar falta:{' '}
                   {d.faltam_para_ligar.length
-                    ? d.faltam_para_ligar.join(', ')
+                    ? d.faltam_para_ligar.map((f) => textoSeguro(f, 'uma condição')).join(', ')
                     : 'ligar com o botão abaixo'}
                   .
                 </div>
@@ -169,7 +179,7 @@ const LoopAlertas = () => {
                   Salvar
                 </Button>
                 <Button size="sm" onClick={() => salvar(true)}>
-                  Ligar o loop
+                  Ligar o acompanhamento
                 </Button>
                 {d.config.ativo && (
                   <Button size="sm" variant="outline" onClick={() => salvar(false)}>
@@ -230,12 +240,16 @@ const LoopAlertas = () => {
                           .catch((e: any) =>
                             setMsg(
                               e?.status === 409
-                                ? e.response?.motivo ||
-                                    'Não dá para registrar o veredito deste ciclo agora.'
+                                ? textoSeguro(
+                                    e.response?.motivo,
+                                    'Não dá para registrar o veredito deste ciclo agora.',
+                                  )
                                 : e?.status === 403
                                   ? 'Só o validador indicado pode registrar o veredito.'
-                                  : e?.response?.motivos?.join(' ') ||
-                                    'Não foi possível registrar agora.',
+                                  : textoSeguro(
+                                      e?.response?.motivos?.join(' '),
+                                      'Não foi possível registrar agora.',
+                                    ),
                             ),
                           )
                       }}
@@ -247,7 +261,7 @@ const LoopAlertas = () => {
               )}
             </CardContent>
           </Card>
-          <p className="text-xs text-muted-foreground">{d.aviso}</p>
+          <p className="text-xs text-muted-foreground">{textoSeguro(d.aviso, '')}</p>
         </div>
       )}
     </div>

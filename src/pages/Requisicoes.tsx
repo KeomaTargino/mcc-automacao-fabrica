@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import {
   criarRequisicao,
   decidirCompra,
@@ -31,26 +33,34 @@ const ESTADOS: Record<string, string> = {
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
-  if (Array.isArray(d?.motivos)) return d.motivos.join('; ')
-  if (d?.erro === 'alcada_nao_cadastrada') return d.motivo
+  if (Array.isArray(d?.motivos))
+    return textoSeguro(d.motivos.join('; '), 'Confira os campos destacados.')
+  if (d?.erro === 'alcada_nao_cadastrada') return textoSeguro(d.motivo, 'Alçada não cadastrada.')
   if (d?.erro === 'acima_da_alcada')
     return `Valor acima da sua alçada${d.proxima_alcada ? '; precisa da alçada de ' + d.proxima_alcada : ''}.`
   if (d?.erro === 'sem_cotacao_escolhida')
     return 'Escolha uma cotação para cada item antes de enviar.'
   if (d?.erro === 'conflito_de_versao')
     return 'Outra alteração chegou antes; a tela foi recarregada.'
-  if (d?.erro === 'catalogo_indisponivel' || d?.motivo) return d.motivo
+  if (d?.erro === 'catalogo_indisponivel' || d?.motivo)
+    return textoSeguro(d.motivo, 'O catálogo do Omie não está disponível agora.')
   if (d?.erro === 'sem_motivo') return 'Informe o motivo da recusa.'
-  if (d?.erro === 'escrita_desligada') return d.mensagem
+  if (d?.erro === 'escrita_desligada') return mensagemDeErro({ status: 423 })
   if (d?.erro === 'pedido_diferente')
-    return 'Pedido diferente da compra: ' + d.diferencas.join('; ')
-  if (d?.erro === 'pedido_nao_lido') return d.motivo
+    return (
+      'Pedido diferente da compra: ' +
+      textoSeguro((d.diferencas ?? []).join('; '), 'confira os itens')
+    )
+  if (d?.erro === 'pedido_nao_lido')
+    return textoSeguro(d.motivo, 'O pedido ainda não foi lido no Omie.')
   if (d?.erro === 'compra_nao_aprovada')
     return 'Só compra aprovada e sem alteração depois da aprovação.'
   if (d?.erro === 'ja_ligada') return 'Esta compra já está ligada a um pedido.'
   if (d?.erro === 'pedido_ja_ligado') return 'Este pedido já está ligado a outra compra.'
-  if (d?.erro === 'payload_invalido') return d.motivo
-  return 'Não foi possível concluir agora. Tente de novo em instantes.'
+  if (d?.erro === 'payload_invalido') return textoSeguro(d.motivo, 'Confira os campos destacados.')
+  return e?.status
+    ? mensagemDeErro(e)
+    : 'Não foi possível concluir agora. Tente de novo em instantes.'
 }
 
 const Requisicoes = () => {
@@ -80,7 +90,7 @@ const Requisicoes = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar as requisições agora. Tente de novo em instantes.',
         ),
       )
@@ -130,11 +140,16 @@ const Requisicoes = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Requisições de compra</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        A sugestão não compra: a pessoa decide. Cada requisição é de um fornecedor; os itens recebem
-        cotações, comparadas com o último preço do histórico, e só a compra aprovada por quem tem
-        alçada segue para o pedido. Mudou depois de aprovar, a aprovação cai.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        A sugestão não compra: a pessoa decide. Cada requisição é de um fornecedor.
       </p>
+      <ComoFunciona>
+        <p>
+          Os itens recebem cotações, comparadas com o último preço do histórico. Só a compra
+          aprovada por quem tem alçada segue para o pedido.
+        </p>
+        <p>Se algo mudar depois de aprovar, a aprovação cai.</p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -246,7 +261,7 @@ const Requisicoes = () => {
                 <CardHeader>
                   <CardTitle className="text-base flex flex-wrap items-center gap-2">
                     <span>Necessária até {r.data_necessaria}</span>
-                    <Badge variant="outline">{ESTADOS[r.estado] ?? r.estado}</Badge>
+                    <Badge variant="outline">{ESTADOS[r.estado] ?? rotuloEstado(r.estado)}</Badge>
                     {r.emergencial && (
                       <Badge className="bg-red-100 text-red-900 border-red-300">
                         emergencial: {r.motivo_emergencia}
@@ -269,7 +284,7 @@ const Requisicoes = () => {
                         </div>
                         {it.pendencias.map((p) => (
                           <div key={p} className="text-xs text-amber-800">
-                            {p}
+                            {textoSeguro(p, 'Há uma pendência neste item.')}
                           </div>
                         ))}
                         {cotacoes.map((c) => (
@@ -443,7 +458,7 @@ const Requisicoes = () => {
                             ? `Ligado ao pedido ${r.vinculo.numero_omie || '(número ainda não lido)'} do Omie.`
                             : r.vinculo.estado === 'resultado_incerto'
                               ? 'Lançamento com resultado incerto: só consulta, nunca repete a gravação.'
-                              : `Situação do lançamento: ${r.vinculo.estado}.`}
+                              : `Situação do lançamento: ${rotuloEstado(r.vinculo.estado)}.`}
                           {r.vinculo.estado === 'resultado_incerto' && dados?.pode_editar && (
                             <Button
                               size="sm"

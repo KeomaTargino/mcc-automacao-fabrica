@@ -3,6 +3,8 @@ import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { perguntarAoAssistente, type RespostaAssistente } from '@/services/pcp-assistente'
 
 interface Troca {
@@ -39,15 +41,22 @@ const Assistente = () => {
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-2">Assistente de consulta</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Pergunte em português sobre alertas, compras e pedidos da sua área. O assistente só
-        consulta: não compra, não aprova, não libera, não publica e não envia nada ao Omie. Toda
-        resposta traz a fonte, o período, a hora da atualização e os limites. Cada pergunta fica
-        registrada; não digite dados pessoais.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Pergunte em português sobre alertas, compras e pedidos da sua área.
       </p>
+      <ComoFunciona>
+        <p>
+          O assistente só consulta: não compra, não aprova, não libera, não publica e não envia nada
+          ao Omie.
+        </p>
+        <p>
+          Toda resposta traz a fonte, o período, a hora da atualização e os limites. Cada pergunta
+          fica registrada; não digite dados pessoais.
+        </p>
+      </ComoFunciona>
       <p className="mb-3 text-sm">
         <Link to="/assistente/loop" className="underline">
-          LOOP-02: perguntas prioritárias
+          Perguntas respondidas com fonte
         </Link>
       </p>
       <div className="mb-4 flex flex-wrap gap-2">
@@ -73,22 +82,22 @@ const Assistente = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              {t.resposta === 'permissao' && (
-                <div>Sua conta não tem a ação de consultar o assistente.</div>
-              )}
+              {t.resposta === 'permissao' && <div>{mensagemDeErro({ status: 403 })}</div>}
               {t.resposta === 'erro' && (
                 <div>Não foi possível consultar agora. As telas seguem funcionando.</div>
               )}
               {typeof t.resposta === 'object' && (
                 <>
-                  <div>{t.resposta.texto}</div>
+                  <div>
+                    {textoSeguro(t.resposta.texto, 'Não encontrei uma resposta para isso.')}
+                  </div>
                   {t.resposta.tipo === 'acao_recusada' && (
                     <div className="text-xs text-amber-800">Tela indicada: {t.resposta.tela}</div>
                   )}
                   {t.resposta.tipo === 'sem_dados' && (
                     <ul className="list-disc pl-5 text-xs text-amber-800">
                       {t.resposta.falta.map((f) => (
-                        <li key={f}>Falta: {f}</li>
+                        <li key={f}>Falta: {textoSeguro(f, 'uma informação')}</li>
                       ))}
                     </ul>
                   )}
@@ -103,7 +112,7 @@ const Assistente = () => {
                         </div>
                       ))}
                       {t.resposta.limites.map((l) => (
-                        <div key={l}>Limite: {l}</div>
+                        <div key={l}>Limite: {textoSeguro(l, 'veja a fonte indicada')}</div>
                       ))}
                     </div>
                   )}

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import {
   decidirNomeCanal,
   obterUnidades,
@@ -20,12 +22,14 @@ const TIPOS: Record<string, string> = {
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
-  if (Array.isArray(d?.motivos)) return d.motivos.join('; ')
-  if (d?.erro === 'conflito_de_versao')
-    return d.motivo || 'Outra alteração chegou antes; recarregue.'
+  if (Array.isArray(d?.motivos))
+    return textoSeguro(d.motivos.join('; '), 'Confira os campos destacados.')
+  if (d?.erro === 'conflito_de_versao') return mensagemDeErro({ status: 409 })
   if (d?.erro === 'unidade_nao_cadastrada') return 'Cadastre a unidade deste cliente antes.'
   if (d?.erro === 'nada_a_revisar') return 'Este nome não está aguardando revisão.'
-  return 'Não foi possível concluir agora. Tente de novo em instantes.'
+  return e?.status
+    ? mensagemDeErro(e)
+    : 'Não foi possível concluir agora. Tente de novo em instantes.'
 }
 
 const moeda = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -47,7 +51,7 @@ const Unidades = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar as unidades agora. Tente de novo em instantes.',
         ),
       )
@@ -74,12 +78,16 @@ const Unidades = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Unidades</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Cada cliente do Omie que recebe pedido tem uma unidade e o nome fantasia usado na operação.
-        O nome que chega de um canal nunca troca o nome operacional sozinho: se for diferente, fica
-        "a revisar" até o faturamento aceitar ou recusar. Toda mudança gera uma versão com autor e
-        hora.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Cada cliente do Omie que recebe pedido tem uma unidade e o nome fantasia da operação.
       </p>
+      <ComoFunciona>
+        <p>
+          O nome que chega de um canal nunca troca o nome operacional sozinho: se for diferente,
+          fica “a revisar” até o faturamento aceitar ou recusar.
+        </p>
+        <p>Toda mudança gera uma versão com autor e hora.</p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -180,7 +188,7 @@ const Unidades = () => {
                   <td className="py-2 pr-3 font-mono">{x.cliente_omie}</td>
                   <td className="py-2 pr-3">{x.unidade}</td>
                   <td className="py-2 pr-3">{x.nome_fantasia_operacional}</td>
-                  <td className="py-2 pr-3">{TIPOS[x.tipo] ?? x.tipo}</td>
+                  <td className="py-2 pr-3">{TIPOS[x.tipo] ?? rotuloEstado(x.tipo)}</td>
                   <td className="py-2 pr-3">{x.versao}</td>
                   <td className="py-2">
                     {x.alterado_por}, {new Date(x.alterado_em).toLocaleDateString('pt-BR')}
@@ -254,14 +262,14 @@ const Unidades = () => {
           >
             <span className="font-mono">{n.cliente_omie}</span>
             <span>
-              {n.canal}: "{n.nome_recebido}"
+              {n.canal}: “{n.nome_recebido}”
             </span>
             <Badge variant="outline">
               {n.estado === 'a_revisar'
                 ? 'a revisar'
                 : n.estado === 'igual'
                   ? 'igual ao operacional'
-                  : n.estado}
+                  : rotuloEstado(n.estado)}
             </Badge>
             {n.estado === 'a_revisar' && dados.pode_editar && (
               <span className="flex gap-1 ml-auto">
@@ -308,8 +316,7 @@ const Unidades = () => {
 
       <h2 className="text-xl font-semibold mb-2">Tabela de preço operacional</h2>
       <p className="text-xs text-muted-foreground mb-2">
-        Use o código do cliente para o preço da unidade, ou * para o preço geral. A tabela do Omie
-        só entra se a conta usar tabela e a leitura for comprovada.
+        Use o código do cliente para o preço da unidade, ou * para o preço geral.
       </p>
       {dados?.pode_editar && (
         <Card className="mb-4">

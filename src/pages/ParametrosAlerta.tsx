@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   CAMPOS,
   aprovarParametrosAlerta,
@@ -41,11 +43,7 @@ const ParametrosAlerta = () => {
         setGrav(r.vigente?.parametros?.gravidade ?? {})
       })
       .catch((e: any) =>
-        setErro(
-          e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
-            : 'Não foi possível carregar agora.',
-        ),
+        setErro(e?.status === 403 ? mensagemDeErro(e) : 'Não foi possível carregar agora.'),
       )
   useEffect(() => {
     carregar()
@@ -79,11 +77,9 @@ const ParametrosAlerta = () => {
       })
       .catch((e: any) =>
         setMsg(
-          e?.status === 403
-            ? 'Sua conta não tem a ação editar parâmetros.'
-            : e?.status === 409
-              ? 'Outra aprovação chegou antes; recarreguei a tela.'
-              : e?.response?.motivos?.join(' ') || 'Não foi possível aprovar agora.',
+          e?.status === 403 || e?.status === 409
+            ? mensagemDeErro(e)
+            : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível aprovar agora.'),
         ),
       )
     // recarrega em caso de conflito para trazer a versão nova
@@ -92,15 +88,22 @@ const ParametrosAlerta = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Parâmetros de alerta</h1>
-      <p className="text-sm text-muted-foreground mb-2">
-        Por produto ou por família; o do produto vale mais que o da família, campo a campo. Campo
-        vazio é lacuna: o alerta daquele item não é calculado, nunca usa valor padrão. A linha de
-        família <span className="font-mono">*</span> guarda os parâmetros gerais (por exemplo, o
-        tempo máximo de pedido parado).{' '}
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Limites de cada alerta, por produto ou por família.{' '}
         <Link to="/alertas" className="underline">
           Ver os alertas
         </Link>
       </p>
+      <ComoFunciona>
+        <p>
+          O parâmetro do produto vale mais que o da família, campo a campo. Campo vazio é lacuna: o
+          alerta daquele item não é calculado e nenhum valor padrão é usado.
+        </p>
+        <p>
+          A linha de família <span className="font-mono">*</span> guarda os parâmetros gerais, como
+          o tempo máximo de pedido parado.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -261,7 +264,8 @@ const ParametrosAlerta = () => {
               {dados.lacunas.length === 0 && <div>Nenhuma lacuna na última rodada.</div>}
               {dados.lacunas.map((l) => (
                 <div key={`${l.regra}|${l.item}|${l.campo}`}>
-                  <span className="font-mono">{l.item}</span> — {l.motivo}
+                  <span className="font-mono">{l.item}</span> —{' '}
+                  {textoSeguro(l.motivo, 'sem informação')}
                 </div>
               ))}
             </CardContent>

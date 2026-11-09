@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, semInformacao, textoSeguro } from '@/lib/pcp/textos'
 
 const fmtData = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('pt-BR') : '—'
@@ -26,8 +28,8 @@ function MetaFonte({
 }) {
   return (
     <p className="text-xs text-muted-foreground mt-1">
-      Fonte: {meta.fonte ?? '—'} · {meta.recurso ?? '—'} · lote {meta.lote?.slice(0, 8) || '—'} ·
-      último sucesso: {fmtData(meta.ultimo_sucesso)} · estado: {meta.estado_tecnico || '—'}
+      Fonte: {meta.fonte ?? '—'} · {meta.recurso ?? '—'} · última leitura:{' '}
+      {fmtData(meta.ultimo_sucesso)}
     </p>
   )
 }
@@ -37,7 +39,7 @@ function Pendencias({ lista }: { lista?: string[] }) {
   return (
     <ul className="mt-2 list-disc list-inside text-sm text-orange-800">
       {lista.map((p, i) => (
-        <li key={i}>{p}</li>
+        <li key={i}>{textoSeguro(p, 'Há uma pendência neste bloco.')}</li>
       ))}
     </ul>
   )
@@ -71,10 +73,10 @@ function BlocoIndisponivel({
         <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-3 py-2">
           Bloco indisponível —{' '}
           {bloco.motivo === 'fonte_nao_integrada_na_fase_1'
-            ? 'fonte não integrada na Fase 1 (não declarado como integrado).'
+            ? 'esta fonte ainda não está ligada ao sistema.'
             : bloco.motivo === 'sem_lote_ativo'
-              ? 'sem lote ativo no momento.'
-              : bloco.motivo || 'indisponível.'}
+              ? 'ainda não há leitura carregada.'
+              : textoSeguro(bloco.motivo, 'indisponível.')}
         </p>
         <Pendencias lista={bloco.pendencias} />
       </CardContent>
@@ -104,9 +106,7 @@ const Painel = () => {
         setCarregando(false)
       })
       .catch((err: any) => {
-        setErro(
-          String(err?.response?.data?.message || err?.message || 'Falha ao carregar o painel.'),
-        )
+        setErro(mensagemDeErro(err))
         setCarregando(false)
       })
   }
@@ -123,18 +123,24 @@ const Painel = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Painel diário</h1>
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Estoque, produção, compras e pedidos do dia, com as mesmas regras de filtro.
+      </p>
+      <ComoFunciona>
+        <p>
+          Linhas e totais usam sempre a mesma leitura do Omie. O saldo nunca soma unidades
+          diferentes. Onde não há informação, a tela diz que não há, em vez de mostrar zero.
+        </p>
+      </ComoFunciona>
       {resposta?.gerado_em && (
         <p className="text-xs text-muted-foreground mb-4">
-          Gerado em {new Date(resposta.gerado_em).toLocaleString('pt-BR')} · filtros:{' '}
-          {JSON.stringify(resposta.filtros)}
+          Gerado em {new Date(resposta.gerado_em).toLocaleString('pt-BR')}
         </p>
       )}
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base">
-            Filtros (mesma janela/lote para linhas e totais)
-          </CardTitle>
+          <CardTitle className="text-base">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
@@ -202,7 +208,7 @@ const Painel = () => {
           className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="status"
         >
-          Painel indisponível — {resposta.motivo || 'sem dados autorizados'}
+          Painel indisponível — {textoSeguro(resposta.motivo, 'sem dados autorizados')}
         </div>
       )}
 
@@ -255,7 +261,7 @@ const Painel = () => {
                         <td className="font-mono text-xs">{l.local_id}</td>
                         <td className="text-right">
                           {l.saldo === null || l.saldo === undefined ? (
-                            <span className="text-orange-700">saldo ausente (null ≠ zero)</span>
+                            <span className="text-orange-700">{semInformacao('saldo')}</span>
                           ) : (
                             `${l.saldo} ${l.unidade}`
                           )}
@@ -266,7 +272,9 @@ const Painel = () => {
                 </table>
                 <Pendencias lista={estoque.pendencias} />
                 {estoque.nota && (
-                  <p className="text-xs text-muted-foreground mt-2">{estoque.nota}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {textoSeguro(estoque.nota, '')}
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -302,20 +310,22 @@ const Painel = () => {
                     <p className="text-sm font-medium">
                       Oficiais (Omie):{' '}
                       {pedidos.oficiais.disponivel
-                        ? `${pedidos.oficiais.total_por_id_unico} pedido(s) por ID único`
-                        : `indisponível — ${pedidos.oficiais.motivo}`}
+                        ? `${pedidos.oficiais.total_por_id_unico} pedido(s), sem repetição`
+                        : `indisponível — ${textoSeguro(pedidos.oficiais.motivo, 'sem informação')}`}
                     </p>
                     <MetaFonte meta={pedidos.oficiais} />
                     {pedidos.oficiais.disponivel && pedidos.oficiais.por_etapa && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Por etapa (original):{' '}
                         {Object.entries(pedidos.oficiais.por_etapa)
-                          .map(([k, v]) => `${k}: ${v}`)
+                          .map(([k, v]) => `${String(k).replace(/_/g, ' ')}: ${v}`)
                           .join(' · ')}
                       </p>
                     )}
                     {pedidos.oficiais.nota && (
-                      <p className="text-xs text-muted-foreground">{pedidos.oficiais.nota}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {textoSeguro(pedidos.oficiais.nota, '')}
+                      </p>
                     )}
                   </div>
                 )}
@@ -324,22 +334,22 @@ const Painel = () => {
                     <p className="text-sm font-medium">
                       Complementares (Nuvemshop):{' '}
                       {pedidos.complementares.disponivel
-                        ? 'classificados na precedência da SPEC'
-                        : `indisponível — ${pedidos.complementares.motivo}`}
+                        ? 'classificados pela ordem de prioridade combinada'
+                        : `indisponível — ${textoSeguro(pedidos.complementares.motivo, 'sem informação')}`}
                     </p>
                     <MetaFonte meta={pedidos.complementares} />
                     {pedidos.complementares.disponivel && pedidos.complementares.contagem && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {Object.entries(pedidos.complementares.contagem).map(([k, v]) => (
                           <Badge key={k} variant="outline">
-                            {k}: {v}
+                            {String(k).replace(/_/g, ' ')}: {v}
                           </Badge>
                         ))}
                       </div>
                     )}
                     {pedidos.complementares.aviso && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {pedidos.complementares.aviso}
+                        {textoSeguro(pedidos.complementares.aviso, '')}
                       </p>
                     )}
                   </div>

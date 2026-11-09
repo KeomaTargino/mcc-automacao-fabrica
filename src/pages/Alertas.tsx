@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import {
   ACOES_TRATAMENTO,
   assumirAlerta,
@@ -65,11 +67,9 @@ const EVENTO: Record<string, string> = {
 }
 
 const msgErro = (e: any) =>
-  e?.status === 403
-    ? 'Sua conta não tem esta ação neste alerta.'
-    : e?.status === 409
-      ? 'Outra pessoa mexeu neste alerta; a lista foi recarregada.'
-      : e?.response?.motivos?.join(' ') || 'Não foi possível concluir agora.'
+  e?.status === 403 || e?.status === 409
+    ? mensagemDeErro(e)
+    : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível concluir agora.')
 
 const Cartao = ({
   a,
@@ -93,7 +93,7 @@ const Cartao = ({
   return (
     <div className="rounded-md border p-3 space-y-1 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">{ESTADO[a.estado]}</Badge>
+        <Badge variant="outline">{ESTADO[a.estado] ?? rotuloEstado(a.estado)}</Badge>
         {a.gravidade === 'critico' ? (
           <Badge className="bg-red-100 text-red-900 border-red-300">crítico</Badge>
         ) : (
@@ -210,7 +210,7 @@ const Alertas = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar os alertas agora. Tente de novo em instantes.',
         ),
       )
@@ -242,18 +242,25 @@ const Alertas = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Alertas</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Cada pessoa vê os alertas da sua área. Assuma um alerta para analisá-lo e registre a ação
-        tomada para tratá-lo. O sistema só registra: não compra, não reprograma, não publica ordem,
-        não muda parâmetro e não gera ação financeira. A mesma situação atualiza o alerta aberto; se
-        voltar depois de tratada, nasce um alerta novo ligado ao anterior.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Os alertas da sua área: assuma para analisar e registre a ação tomada.
       </p>
+      <ComoFunciona>
+        <p>
+          O sistema só registra: não compra, não reprograma, não publica ordem, não muda parâmetro e
+          não gera ação financeira.
+        </p>
+        <p>
+          A mesma situação atualiza o alerta aberto. Se ela voltar depois de tratada, nasce um
+          alerta novo ligado ao anterior.
+        </p>
+      </ComoFunciona>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link to="/parametros/alertas" className="underline text-sm">
           Parâmetros de alerta
         </Link>
         <Link to="/alertas/loop" className="underline text-sm">
-          LOOP-01 (alertas críticos tratados)
+          Alertas críticos tratados
         </Link>
         {dados?.pode_rodar && (
           <Button size="sm" onClick={rodar} disabled={rodando}>
@@ -307,10 +314,10 @@ const Alertas = () => {
         <div className="mb-4 rounded-md border px-4 py-3 text-sm" role="status">
           {rodada.executou
             ? `Rodada feita: ${rodada.criados} novos, ${rodada.atualizados} atualizados, ${rodada.lacunas} lacunas.`
-            : rodada.motivo}
+            : textoSeguro(rodada.motivo, 'Os alertas não rodaram agora.')}
           <ul className="mt-2 list-disc pl-5 text-xs text-amber-800">
             {rodada.fontes_pendentes.map((f) => (
-              <li key={f}>sem fonte ligada — {f}</li>
+              <li key={f}>sem fonte ligada — {textoSeguro(f, 'uma fonte de dados')}</li>
             ))}
           </ul>
         </div>
@@ -349,7 +356,8 @@ const Alertas = () => {
           <CardContent className="text-sm space-y-1">
             {dados.lacunas.map((l) => (
               <div key={`${l.regra}|${l.item}|${l.campo}`}>
-                <span className="font-mono">{l.item}</span> — {l.motivo}
+                <span className="font-mono">{l.item}</span> —{' '}
+                {textoSeguro(l.motivo, 'sem informação')}
               </div>
             ))}
           </CardContent>

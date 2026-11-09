@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   marcarPagoAntecipado,
   obterRecebimentos,
@@ -16,9 +18,12 @@ const moeda = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curr
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
-  if (Array.isArray(d?.motivos)) return d.motivos.join('; ')
-  if (d?.motivo) return d.motivo
-  return 'Não foi possível concluir agora. Tente de novo em instantes.'
+  if (Array.isArray(d?.motivos))
+    return textoSeguro(d.motivos.join('; '), 'Confira os campos destacados.')
+  if (d?.motivo) return textoSeguro(d.motivo, 'Confira os campos destacados.')
+  return e?.status
+    ? mensagemDeErro(e)
+    : 'Não foi possível concluir agora. Tente de novo em instantes.'
 }
 
 const Recebimentos = () => {
@@ -58,7 +63,7 @@ const Recebimentos = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar os recebimentos agora. Tente de novo em instantes.',
         ),
       )
@@ -92,11 +97,16 @@ const Recebimentos = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Recebimentos</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        O almoxarifado registra o que chegou e liga cada linha a um ou mais pedidos aprovados; a
-        soma das ligações precisa bater com a linha. Falta e sobra aparecem. Nada aqui ajusta o
-        estoque, classifica a nota ou lança no financeiro: isso continua no Omie, com as pessoas.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        O almoxarifado registra o que chegou e liga cada linha aos pedidos aprovados.
       </p>
+      <ComoFunciona>
+        <p>A soma das ligações precisa bater com a linha. Falta e sobra aparecem na tela.</p>
+        <p>
+          Nada aqui ajusta o estoque, classifica a nota ou lança no financeiro: isso continua no
+          Omie, com as pessoas.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -188,7 +198,9 @@ const Recebimentos = () => {
                   (r) =>
                     r.criado
                       ? 'Recebimento registrado.' +
-                        (r.avisos_ja_paga?.length ? ' ' + r.avisos_ja_paga.join(' ') : '')
+                        (r.avisos_ja_paga?.length
+                          ? ' ' + textoSeguro(r.avisos_ja_paga.join(' '), '')
+                          : '')
                       : 'Esse recebimento já estava registrado.',
                 )
               }
@@ -233,7 +245,7 @@ const Recebimentos = () => {
                   )}
                   {l.pendencias.map((p) => (
                     <div key={p} className="text-xs text-amber-800">
-                      {p}
+                      {textoSeguro(p, 'Há uma pendência neste item.')}
                     </div>
                   ))}
                 </div>
@@ -249,7 +261,7 @@ const Recebimentos = () => {
               )}
               {r.avisos_ja_paga.map((a) => (
                 <div key={a} className="text-amber-800 font-medium">
-                  {a}
+                  {textoSeguro(a, 'Este pedido já foi pago.')}
                 </div>
               ))}
             </CardContent>
@@ -457,7 +469,11 @@ const Recebimentos = () => {
                   (r) =>
                     r.estado === 'conferida'
                       ? 'Nota de demonstração confere.'
-                      : 'Pendente: ' + r.pendencias.map((p: any) => p.mensagem).join('; '),
+                      : 'Pendente: ' +
+                        textoSeguro(
+                          r.pendencias.map((p: any) => p.mensagem).join('; '),
+                          'confira os itens da nota',
+                        ),
                 )
               }
             >
@@ -473,12 +489,12 @@ const Recebimentos = () => {
             <Badge variant="outline">{n.estado === 'conferida' ? 'confere' : 'pendente'}</Badge>
             {n.pendencias.map((p) => (
               <div key={p.mensagem} className="text-xs text-red-800">
-                {p.mensagem}
+                {textoSeguro(p.mensagem, 'Há uma diferença para conferir.')}
               </div>
             ))}
             {n.avisos.map((a) => (
               <div key={a} className="text-xs text-amber-800">
-                {a}
+                {textoSeguro(a, 'Confira esta nota.')}
               </div>
             ))}
           </div>

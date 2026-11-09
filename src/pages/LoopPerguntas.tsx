@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   acaoLoop2,
   obterLoop2,
@@ -74,11 +76,7 @@ const LoopPerguntas = () => {
         }
       })
       .catch((e: any) =>
-        setErro(
-          e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
-            : 'Não foi possível carregar agora.',
-        ),
+        setErro(e?.status === 403 ? mensagemDeErro(e) : 'Não foi possível carregar agora.'),
       )
   }, [])
   useEffect(() => {
@@ -96,12 +94,13 @@ const LoopPerguntas = () => {
       .catch((e: any) =>
         setMsg(
           e?.status === 403
-            ? 'Sua conta não tem esta ação.'
+            ? mensagemDeErro(e)
             : e?.response?.faltam
-              ? `Não dá para ligar: falta ${e.response.faltam.join(', ')}. O loop continua desligado.`
-              : e?.response?.motivos?.join(' ') ||
-                e?.response?.motivo ||
-                'Não foi possível concluir agora.',
+              ? `Não dá para ligar: falta ${e.response.faltam.map((f: string) => textoSeguro(f, 'uma condição')).join(', ')}. O acompanhamento continua desligado.`
+              : textoSeguro(
+                  e?.response?.motivos?.join(' ') || e?.response?.motivo,
+                  'Não foi possível concluir agora.',
+                ),
         ),
       )
 
@@ -109,19 +108,24 @@ const LoopPerguntas = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-2">
-        LOOP-02 — perguntas prioritárias respondidas com fonte
-      </h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Proporção do ciclo = perguntas prioritárias respondidas com fonte e período{' '}
-        <strong>e aceitas pelo validador</strong> ÷ perguntas prioritárias feitas no ciclo. Sem
-        pergunta prioritária no ciclo, "não aplicável", nunca 100%. A pergunta feita é ligada à
-        prioritária por escolha de quem perguntou ou do validador. O loop só mede e registra o
-        veredito; não responde no lugar do assistente.{' '}
+      <h1 className="text-3xl font-bold mb-2">Perguntas respondidas com fonte</h1>
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Quantas perguntas prioritárias o assistente respondeu com fonte e período.{' '}
         <Link to="/assistente" className="underline">
           Voltar ao assistente
         </Link>
       </p>
+      <ComoFunciona>
+        <p>
+          Proporção do ciclo = perguntas prioritárias respondidas com fonte e período{' '}
+          <strong>e aceitas pelo validador</strong> ÷ perguntas prioritárias feitas no ciclo. Sem
+          pergunta prioritária no ciclo, “não aplicável”, nunca 100%.
+        </p>
+        <p>
+          A pergunta feita é ligada à prioritária por escolha de quem perguntou ou do validador. O
+          acompanhamento só mede e registra o veredito; não responde no lugar do assistente.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -170,9 +174,9 @@ const LoopPerguntas = () => {
                   <Badge variant="outline">provisório: janela ainda não definida</Badge>
                 )}
                 {d.config.ativo ? (
-                  <Badge>loop ligado</Badge>
+                  <Badge>acompanhamento ligado</Badge>
                 ) : (
-                  <Badge variant="outline">loop desligado</Badge>
+                  <Badge variant="outline">acompanhamento desligado</Badge>
                 )}
               </CardTitle>
             </CardHeader>
@@ -187,7 +191,7 @@ const LoopPerguntas = () => {
                 <div className="text-xs text-amber-800">
                   Para ligar falta:{' '}
                   {d.faltam_para_ligar.length
-                    ? d.faltam_para_ligar.join(', ')
+                    ? d.faltam_para_ligar.map((f) => textoSeguro(f, 'uma condição')).join(', ')
                     : 'usar o botão Ligar'}
                   .
                 </div>
@@ -275,7 +279,7 @@ const LoopPerguntas = () => {
                       <span>
                         {p.revisao.decisao === 'aceita'
                           ? 'aceita'
-                          : `recusada: ${p.revisao.motivo}`}{' '}
+                          : `recusada: ${textoSeguro(p.revisao.motivo, 'sem motivo informado')}`}{' '}
                         por {p.revisao.validador}
                       </span>
                     )}
@@ -372,7 +376,7 @@ const LoopPerguntas = () => {
                         janela_dias: n(janela),
                         validador: valid.trim() || null,
                       },
-                      'Configuração salva; o loop continua desligado se faltar algo.',
+                      'Configuração salva; o acompanhamento continua desligado se faltar algo.',
                     )
                   }
                 >
@@ -390,17 +394,19 @@ const LoopPerguntas = () => {
                         validador: valid.trim() || null,
                         ligar: true,
                       },
-                      'Loop ligado.',
+                      'Acompanhamento ligado.',
                     )
                   }
                 >
-                  Ligar o loop
+                  Ligar o acompanhamento
                 </Button>
                 {d.config.ativo && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => rodar({ acao: 'config', ligar: false }, 'Loop desligado.')}
+                    onClick={() =>
+                      rodar({ acao: 'config', ligar: false }, 'Acompanhamento desligado.')
+                    }
                   >
                     Desligar
                   </Button>
@@ -456,7 +462,7 @@ const LoopPerguntas = () => {
               )}
             </CardContent>
           </Card>
-          <p className="text-xs text-muted-foreground">{d.aviso}</p>
+          <p className="text-xs text-muted-foreground">{textoSeguro(d.aviso, '')}</p>
         </div>
       )}
     </div>

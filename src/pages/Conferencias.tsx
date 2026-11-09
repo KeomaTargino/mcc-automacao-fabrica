@@ -16,6 +16,8 @@ import {
   type PerfilTela,
 } from '@/lib/pcp/conferencia-servidor'
 import { obterPerfil } from '@/services/pcp-access'
+import ComoFunciona from '@/components/ComoFunciona'
+import { rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import {
   aprovarConsolidacaoServidor,
   lerEstadoProducao,
@@ -104,7 +106,7 @@ const Conferencias = () => {
       unidade: 'UN',
     })
     const m = mensagemDaConferencia(r.http, r.corpo)
-    setResultado(m.texto)
+    setResultado(textoSeguro(m.texto, 'Não foi possível registrar. Tente de novo.'))
     if (!m.manterId) tentativaConf.current = null
     if (m.ok) {
       setQuantidade('') // campo limpo: a próxima conferência é digitada, nunca puxada
@@ -135,7 +137,7 @@ const Conferencias = () => {
       motivo: motivoAprov.trim(),
     })
     const m = mensagemDaAprovacao(r.http, r.corpo)
-    setMsgAprov(m.texto)
+    setMsgAprov(textoSeguro(m.texto, 'Não foi possível registrar a decisão. Tente de novo.'))
     if (!m.manterId) tentativaAprov.current = null
     if (m.recarregar) await carregar()
     setEnviando(false)
@@ -144,10 +146,20 @@ const Conferencias = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Dupla conferência</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Produzido, encaixotado, recebido (expedição) e entrada em câmara são registros distintos. A
-        divergência não é corrigida aqui: vai para revisão do PCP. Tudo fica guardado no servidor.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Confira o que foi produzido, encaixotado, recebido na expedição e levado para a câmara.
       </p>
+      <ComoFunciona>
+        <p>
+          Produzido, encaixotado, recebido (expedição) e entrada em câmara são registros distintos.
+          A divergência não é corrigida aqui: vai para revisão do PCP. Tudo fica guardado no
+          servidor.
+        </p>
+        <p>
+          Nada é enviado ao Omie por esta tela. Nova conferência ou novo apontamento invalida a
+          aprovação anterior.
+        </p>
+      </ComoFunciona>
 
       {erroCarga && (
         <div
@@ -342,8 +354,7 @@ const Conferencias = () => {
               <CardContent className="text-sm space-y-3">
                 <p className="text-muted-foreground">
                   Decidir a quantidade final com motivo registra a aprovação e prepara a ordem de
-                  conclusão. Nada é enviado ao Omie. Nova conferência ou novo apontamento invalida a
-                  aprovação anterior.
+                  conclusão.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1">
@@ -378,8 +389,9 @@ const Conferencias = () => {
                 </Button>
                 {ordemPreparada && (
                   <p className="text-xs text-muted-foreground">
-                    Ordem de conclusão: {ordemPreparada.estado} ({ordemPreparada.quantidade} UN). O
-                    envio ao Omie é outra etapa, em Envio ao Omie.
+                    Ordem de conclusão: {rotuloEstado(ordemPreparada.estado)} (
+                    {ordemPreparada.quantidade} UN). O envio ao Omie é outra etapa, em Envio ao
+                    Omie.
                   </p>
                 )}
                 {msgAprov && (

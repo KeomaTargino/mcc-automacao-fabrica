@@ -51,7 +51,9 @@ const Index = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-1">{saudacaoCompleta(agora, user?.name)}</h1>
-      <p className="text-sm text-muted-foreground mb-6 capitalize">{dataPorExtenso(agora)}</p>
+      <p className="text-sm text-muted-foreground mb-6 capitalize" data-subtitulo>
+        {dataPorExtenso(agora)}
+      </p>
 
       {areas !== null && areas.length === 0 && (
         <p className="text-sm" role="status">

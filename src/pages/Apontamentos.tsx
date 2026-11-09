@@ -13,6 +13,8 @@ import {
   type TipoApontamento,
 } from '@/lib/pcp/apontamento-servidor'
 import { obterPerfil } from '@/services/pcp-access'
+import ComoFunciona from '@/components/ComoFunciona'
+import { textoSeguro } from '@/lib/pcp/textos'
 import {
   lerEstadoProducao,
   registrarApontamentoServidor,
@@ -85,7 +87,7 @@ const Apontamentos = () => {
     setEnviando(true)
     const r = await registrarApontamentoServidor(corpo)
     const m = mensagemDoApontamento(r.http, r.corpo)
-    setResultado(m.texto)
+    setResultado(textoSeguro(m.texto, 'Não foi possível registrar. Tente de novo.'))
     if (!m.manterId) tentativa.current = null
     if (m.recarregar) await carregar()
     setEnviando(false)
@@ -103,7 +105,7 @@ const Apontamentos = () => {
     }
     const v = validarFormulario(f)
     if (!v.ok) {
-      setResultado(v.motivo)
+      setResultado(textoSeguro(v.motivo, 'Confira os campos destacados.'))
       return
     }
     const assinatura = assinaturaDoFormulario(opAtual, pontoAtual, f)
@@ -154,11 +156,15 @@ const Apontamentos = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Apontamentos na origem</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Retirada, adicional, devolução, perda declarada e realizado, com autor, ordem, unidade e
-        ponto. Os eventos ficam guardados no servidor e são imutáveis: a correção cria uma
-        retificação com motivo.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Registre retirada, adicional, devolução, perda declarada e realizado de cada ordem.
       </p>
+      <ComoFunciona>
+        <p>
+          Cada registro guarda autor, ordem, unidade e ponto. Os registros ficam no servidor e não
+          são apagados: para corrigir, faça uma retificação com motivo.
+        </p>
+      </ComoFunciona>
 
       {erroCarga && (
         <div

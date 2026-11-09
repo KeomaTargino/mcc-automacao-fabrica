@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   montarZip,
   obterColecaoExportada,
@@ -10,6 +12,9 @@ import {
   resumoParaCsv,
   type ResumoExportacao,
 } from '@/services/pcp-exportacao'
+
+// Nome da coleção como a pessoa lê: sem o prefixo do sistema e sem sublinhado.
+const nomeColecao = (c: string) => String(c).replace(/^pcp_/, '').replace(/_/g, ' ')
 
 const Exportacao = () => {
   const { isAuthenticated, loading } = useAuth()
@@ -23,7 +28,7 @@ const Exportacao = () => {
   const erro403 = (e: any) =>
     setMsg(
       e?.status === 403
-        ? 'Sua conta não tem a ação exportar dados.'
+        ? mensagemDeErro(e)
         : 'Não foi possível exportar agora. Tente de novo em instantes.',
     )
 
@@ -41,7 +46,7 @@ const Exportacao = () => {
       for (let i = 0; i < linhas.length; i++) {
         const l = linhas[i]
         if (!l.exportada) continue
-        setProgresso(`Lendo ${l.colecao} (${i + 1} de ${linhas.length})…`)
+        setProgresso(`Lendo ${nomeColecao(l.colecao)} (${i + 1} de ${linhas.length})…`)
         const c = await obterColecaoExportada(l.colecao)
         if (c.exportada && c.csv !== undefined) {
           arquivos.push({ nome: `${l.colecao}.csv`, conteudo: c.csv })
@@ -79,7 +84,7 @@ const Exportacao = () => {
       setMsg(
         final.completo
           ? 'Pacote baixado, completo.'
-          : 'Pacote baixado, mas INCOMPLETO: veja as coleções marcadas "não" no resumo.',
+          : 'Pacote baixado, mas incompleto: veja no resumo o que ficou fora do pacote.',
       )
     } catch (e) {
       setProgresso(null)
@@ -90,13 +95,20 @@ const Exportacao = () => {
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-2">Exportação dos dados</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Baixa os dados complementares do sistema (uma planilha CSV por coleção e um resumo com a
-        quantidade de registros) num arquivo só, identificado como dados da American Goodies. O
-        pacote não leva senha, chave nem segredo, contém dados dos seus clientes e fornecedores e
-        não deve ir para o Git nem para e-mail. As cópias das leituras do Omie e da Nuvemshop entram
-        só como contagem: relê-se a fonte.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Baixa os dados do sistema num arquivo só, com uma planilha por assunto e um resumo.
       </p>
+      <ComoFunciona>
+        <p>
+          O arquivo é identificado como dados da American Goodies. Não leva senha, chave nem
+          segredo, mas contém dados dos seus clientes e fornecedores: guarde com cuidado e não envie
+          por e-mail.
+        </p>
+        <p>
+          As cópias das leituras do Omie e da Nuvemshop entram só como contagem, porque a fonte pode
+          ser lida de novo.
+        </p>
+      </ComoFunciona>
       <div className="mb-4 flex flex-wrap gap-2">
         <Button variant="outline" onClick={ver}>
           Ver o resumo
@@ -134,10 +146,14 @@ const Exportacao = () => {
             </div>
             {resumo.linhas.map((l) => (
               <div key={l.colecao} className="flex flex-wrap gap-x-3">
-                <span className="font-mono">{l.colecao}</span>
+                <span className="font-medium">{nomeColecao(l.colecao)}</span>
                 <span>{l.registros === null ? '—' : l.registros} registros</span>
                 <span>{l.exportada ? 'no pacote' : 'fora do pacote'}</span>
-                {l.motivo && <span className="text-xs text-amber-800">{l.motivo}</span>}
+                {l.motivo && (
+                  <span className="text-xs text-amber-800">
+                    {textoSeguro(l.motivo, 'fora do pacote')}
+                  </span>
+                )}
               </div>
             ))}
           </CardContent>

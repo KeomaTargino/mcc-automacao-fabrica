@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ComoFunciona from '@/components/ComoFunciona'
+import { textoSeguro } from '@/lib/pcp/textos'
 import { avaliarLinha, validarRascunho, type LinhaProgramacao } from '@/lib/pcp/planejamento'
 import {
   calendarioDosParametros,
@@ -99,7 +101,7 @@ const Planejamento = () => {
       parametros: situacao.parametros,
       fracoesUsadas: fracoes,
     })
-    setResultado(r.motivo)
+    setResultado(textoSeguro(r.motivo))
     if (r.estado === 'ok') setLinhas([...linhas, linha])
   }
 
@@ -108,7 +110,7 @@ const Planejamento = () => {
     setPublicando(true)
     const r = await publicarProgramacaoServidor(estado.programacao?.versao ?? 0, linhas)
     const m = mensagemDaPublicacao(r.http, r.corpo)
-    setResultado(m.texto)
+    setResultado(textoSeguro(m.texto, 'Não foi possível publicar. Tente de novo.'))
     if (m.ok) setLinhas([])
     if (m.recarregar) await carregar()
     setPublicando(false)
@@ -119,10 +121,15 @@ const Planejamento = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Planejamento</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Programação por recurso e dia, com a capacidade e o calendário aprovados. A programação
-        publicada fica guardada no servidor e todos veem a mesma versão.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Programação por recurso e dia, com a capacidade e o calendário aprovados.
       </p>
+      <ComoFunciona>
+        <p>
+          A programação publicada fica guardada no servidor e todos veem a mesma versão. A tela
+          confere a capacidade de cada recurso por dia antes de aceitar uma linha.
+        </p>
+      </ComoFunciona>
 
       {erroCarga && (
         <div
@@ -141,7 +148,7 @@ const Planejamento = () => {
           className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="status"
         >
-          {situacao.motivo}.
+          {textoSeguro(situacao.motivo, 'Aprove os parâmetros antes de publicar.')}.
         </div>
       )}
 

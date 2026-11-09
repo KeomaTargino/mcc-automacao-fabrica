@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import {
   contarVolumes,
   decidirDuplicata,
@@ -33,11 +35,19 @@ const MODALIDADES: [string, string][] = [
 ]
 
 const msgErro = (e: any) =>
-  e?.status === 403
-    ? 'Sua conta não tem esta ação.'
-    : e?.status === 409
-      ? 'O pedido mudou; a lista foi recarregada. Confira e tente de novo.'
-      : e?.response?.motivos?.join(' ') || 'Não foi possível concluir agora.'
+  e?.status === 403 || e?.status === 409
+    ? mensagemDeErro(e)
+    : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível concluir agora.')
+
+// Linha do que lançar no Omie, em palavras: sem estrutura de dados na tela.
+const linhaLegivel = (x: any): string =>
+  typeof x === 'object' && x !== null
+    ? Object.entries(x)
+        .map(
+          ([k, v]) => `${String(k).replace(/_/g, ' ')}: ${typeof v === 'object' ? '…' : String(v)}`,
+        )
+        .join(' · ')
+    : String(x)
 
 const Linha = ({
   p,
@@ -82,7 +92,7 @@ const Linha = ({
         </div>
         {p.motivos_fila.map((m) => (
           <div key={m} className="text-xs text-amber-800">
-            {m}
+            {textoSeguro(m, 'Este pedido precisa de revisão.')}
           </div>
         ))}
         {p.itens.map((i) => (
@@ -250,12 +260,16 @@ const Linha = ({
         {p.estado === 'liberado' && p.para_lancar.length > 0 && (
           <details className="text-xs">
             <summary>O que lançar no Omie (gravação desligada)</summary>
-            <pre className="whitespace-pre-wrap">{JSON.stringify(p.para_lancar, null, 2)}</pre>
+            <ul className="mt-1 list-disc list-inside">
+              {p.para_lancar.map((x: any, k: number) => (
+                <li key={k}>{linhaLegivel(x)}</li>
+              ))}
+            </ul>
           </details>
         )}
         {p.gravacoes.map((g) => (
           <div key={g.operacao} className="text-xs">
-            Gravação ({g.operacao}):{' '}
+            Gravação ({String(g.operacao).replace(/_/g, ' ')}):{' '}
             {g.estado === 'gravado_e_conferido'
               ? 'gravado e conferido'
               : g.estado.replace(/_/g, ' ')}
@@ -277,7 +291,7 @@ const PedidosPreparacao = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar os pedidos agora. Tente de novo em instantes.',
         ),
       )
@@ -290,11 +304,16 @@ const PedidosPreparacao = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Preparação de pedidos</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Cada pedido com unidade, tabela, origem, frete e volumes e o selo apto ou bloqueado. O frete
-        é escolhido pedido a pedido e os volumes são os contados pela expedição. Nada é alterado no
-        Omie sem a chave ligada pelo dono; a nota fiscal continua sendo emitida por uma pessoa.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Cada pedido com unidade, tabela, origem, frete e volumes, marcado como apto ou bloqueado.
       </p>
+      <ComoFunciona>
+        <p>O frete é escolhido pedido a pedido e os volumes são os contados pela expedição.</p>
+        <p>
+          Nada é alterado no Omie sem a chave ligada pelo dono; a nota fiscal continua sendo emitida
+          por uma pessoa.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -314,7 +333,9 @@ const PedidosPreparacao = () => {
       {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {dados && !dados.disponivel && (
         <Card>
-          <CardContent className="py-6 text-sm">{dados.motivo}</CardContent>
+          <CardContent className="py-6 text-sm">
+            {textoSeguro(dados.motivo, 'Os pedidos ainda não estão disponíveis.')}
+          </CardContent>
         </Card>
       )}
       {dados?.disponivel && dados.pode && (
@@ -338,7 +359,9 @@ const PedidosPreparacao = () => {
               : 'desligada (lançar à mão com os dados da tela)'}
             .
           </p>
-          {dados.aviso && <p className="mb-4 text-xs text-amber-800">{dados.aviso}</p>}
+          {dados.aviso && (
+            <p className="mb-4 text-xs text-amber-800">{textoSeguro(dados.aviso, '')}</p>
+          )}
           <div className="space-y-3">
             {dados.pedidos?.map((p) => (
               <Linha

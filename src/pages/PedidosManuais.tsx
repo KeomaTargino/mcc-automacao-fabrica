@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, rotuloEstado, textoSeguro } from '@/lib/pcp/textos'
 import { criarPedidoManual } from '@/services/pcp-faturamento'
 
 const ESTADO: Record<string, string> = {
@@ -30,12 +32,12 @@ const PedidosManuais = () => {
       motivo,
       referencia: ref,
     })
-      .then((r) => setMsg(`Pedido ${r.pedido_id}. ${ESTADO[r.estado] ?? r.estado}`))
+      .then((r) => setMsg(`Pedido ${r.pedido_id}. ${ESTADO[r.estado] ?? rotuloEstado(r.estado)}`))
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem a ação preparar pedido.'
-            : e?.response?.motivos?.join(' ') || 'Não foi possível registrar agora.',
+            ? mensagemDeErro(e)
+            : textoSeguro(e?.response?.motivos?.join(' '), 'Não foi possível registrar agora.'),
         ),
       )
   }
@@ -44,11 +46,15 @@ const PedidosManuais = () => {
   return (
     <div className="container mx-auto py-8 px-4 max-w-xl">
       <h1 className="text-3xl font-bold mb-2">Pedidos manuais</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Pedidos que chegam por e-mail ou WhatsApp. Antes de registrar, o sistema procura o mesmo
-        pedido pela referência; pedido parecido (cliente, data e itens) vai para revisão. Nunca
-        junta por cliente e valor.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Pedidos que chegam por e-mail ou WhatsApp.
       </p>
+      <ComoFunciona>
+        <p>
+          Antes de registrar, o sistema procura o mesmo pedido pela referência. Pedido parecido
+          (cliente, data e itens) vai para revisão. Nunca junta por cliente e valor.
+        </p>
+      </ComoFunciona>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Novo pedido manual</CardTitle>

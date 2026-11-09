@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { semInformacao, textoSeguro } from '@/lib/pcp/textos'
 import {
   calcularSugestaoProducao,
   calcularSugestaoCompra,
@@ -22,19 +24,19 @@ import {
 
 const CASOS: { rotulo: string; calcular: () => Sugestao }[] = [
   {
-    rotulo: 'COOKIE-1 · T1: projeção 70 × firmes 50 → alvo 70 → necessidade 50 → sugestão 50 UN',
+    rotulo: 'Cookie · projeção 70 e pedidos firmes 50 → alvo 70 → faltam 50 → sugestão de 50 UN',
     calcular: () => calcularSugestaoProducao('S-T1', 'COOKIE-1', FIXTURE_T1),
   },
   {
-    rotulo: 'COOKIE-1 · T2: firmes 80 vencem projeção (máximo, não soma) → necessidade 60 UN',
+    rotulo: 'Cookie · pedidos firmes 80 vencem a projeção (vale o maior, não soma) → faltam 60 UN',
     calcular: () => calcularSugestaoProducao('S-T2', 'COOKIE-1', FIXTURE_T2),
   },
   {
-    rotulo: 'COOKIE-1 · T4: necessidade 51 → lote 60; capacidade 50 → excedente 10 UN',
+    rotulo: 'Cookie · faltam 51 → lote de 60; capacidade 50 → 10 UN acima da capacidade',
     calcular: () => calcularSugestaoProducao('S-T4', 'COOKIE-1', FIXTURE_T4),
   },
   {
-    rotulo: 'COOKIE-1 · T6: mapa de pedidos firmes ausente → bloqueada (null, nunca default)',
+    rotulo: 'Cookie · pedidos firmes sem informação → bloqueada (nada é preenchido sozinho)',
     calcular: () =>
       calcularSugestaoProducao('S-T6', 'COOKIE-1', {
         ...FIXTURE_T1,
@@ -42,17 +44,17 @@ const CASOS: { rotulo: string; calcular: () => Sugestao }[] = [
       }),
   },
   {
-    rotulo: 'FARINHA · compra: falta 4,8 KG → lote mínimo 3 e múltiplo 2 → sugestão 6 KG',
+    rotulo: 'Farinha · compra: faltam 4,8 KG → lote mínimo 3 e múltiplo 2 → sugestão de 6 KG',
     calcular: () => calcularSugestaoCompra('C-T1', 'FARINHA', FIXTURE_COMPRA),
   },
   {
-    rotulo: 'ACUCAR · compra: falta 1 KG com lote mínimo 5 → sugestão 6 KG',
+    rotulo: 'Açúcar · compra: falta 1 KG com lote mínimo 5 → sugestão de 6 KG',
     calcular: () => calcularSugestaoCompra('C-T2', 'ACUCAR', FIXTURE_COMPRA_LOTE_MINIMO),
   },
   {
-    rotulo: 'OLEO · compra: recebimentos a receber desconhecidos → bloqueada (não vira 0)',
+    rotulo: 'Óleo · compra: recebimentos a receber sem informação → bloqueada (não vira zero)',
     calcular: () =>
-      calcularSugestaoCompra('C-NULL', 'OLEO', {
+      calcularSugestaoCompra('C-T3', 'OLEO', {
         ...FIXTURE_COMPRA,
         compras_confirmadas_a_receber: null,
       }),
@@ -81,10 +83,10 @@ const Sugestoes = () => {
       versao_parametros: s.memoria.versao_parametros,
       estado: s.estado,
     }
-    // Demonstração: conta do owner (Keoma) tem editar_programacao na matriz v1.2.
+    // Demonstração: o dono tem editar_programacao na matriz v1.2.
     const r = aceitarSugestao(
       aceitavel,
-      { acoes: ['editar_programacao'], usuario: 'keoma.targino' },
+      { acoes: ['editar_programacao'], usuario: 'dono' },
       rascunhos,
     )
     if (r.estado === 'rascunho_criado') {
@@ -93,27 +95,31 @@ const Sugestoes = () => {
         `Rascunho criado: ${r.rascunho.item} ${r.rascunho.quantidade} ${r.rascunho.unidade} — NÃO publica e NÃO envia compra.`,
       )
     } else if (r.estado === 'replay') {
-      setMsgAceitar('Repetição ignorada: rascunho já existia (idempotência).')
+      setMsgAceitar('Já registrado: este rascunho já existia.')
     } else {
-      setMsgAceitar(`${r.estado}: ${r.motivo}`)
+      setMsgAceitar(textoSeguro(r.motivo, 'Não foi possível aceitar esta sugestão.'))
     }
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Sugestões com memória de cálculo</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Método proposto baseline90-v1 (ainda não aprovado como regra empresarial — a aprovação do
-        CL-006 é outra task). Aceitar sugestão não publica programação nem envia compra.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Sugestões de produção e de compra, com a conta mostrada passo a passo.
       </p>
+      <ComoFunciona>
+        <p>
+          O método proposto (baseline90-v1) ainda não foi aprovado como regra da empresa. Aceitar
+          uma sugestão não publica programação nem envia compra.
+        </p>
+      </ComoFunciona>
 
       <div
         className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"
         role="status"
       >
-        <strong>Tela de demonstração.</strong> Casos sintéticos com fixtures isoladas (oráculos
-        T1/T2/T4/T6 da SPEC). Os cálculos com dados reais (90 dias de Omie) vêm depois da aprovação
-        do método e da conexão real.
+        <strong>Dados de demonstração.</strong> Casos de exemplo. Os cálculos com os 90 dias reais
+        do Omie vêm depois da aprovação do método e da conexão real.
       </div>
 
       <div className="space-y-3">
@@ -128,7 +134,7 @@ const Sugestoes = () => {
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="border-amber-300 text-amber-900">
-                    Bloqueada (null)
+                    Bloqueada
                   </Badge>
                 )}
               </CardTitle>
@@ -142,12 +148,8 @@ const Sugestoes = () => {
                 >
                   {aberta === s.id ? 'Ocultar memória' : 'Ver memória de cálculo'}
                 </Button>
-                <Button
-                  size="sm"
-                  disabled
-                  title="Aceitar → rascunho é a próxima task (8bb4ef77); aqui nada é publicado nem comprado"
-                >
-                  Aceitar (desabilitado na demo)
+                <Button size="sm" disabled title="Nesta demonstração nada é publicado nem comprado">
+                  Aceitar (indisponível na demonstração)
                 </Button>
               </div>
               {aberta === s.id && s.memoria && (
@@ -160,8 +162,8 @@ const Sugestoes = () => {
                     <tbody>
                       {s.memoria.passos.map((p) => (
                         <tr key={p.nome}>
-                          <td className="py-0.5 pr-2 font-mono">{p.nome}</td>
-                          <td className="py-0.5 pr-2">{p.valor ?? 'null'}</td>
+                          <td className="py-0.5 pr-2">{String(p.nome).replace(/_/g, ' ')}</td>
+                          <td className="py-0.5 pr-2">{p.valor ?? semInformacao()}</td>
                           <td className="py-0.5 text-muted-foreground">{p.formula}</td>
                         </tr>
                       ))}
@@ -170,7 +172,7 @@ const Sugestoes = () => {
                   {s.memoria.pendencias.length > 0 && (
                     <ul className="list-disc list-inside text-amber-800">
                       {s.memoria.pendencias.map((p, i) => (
-                        <li key={i}>{p}</li>
+                        <li key={i}>{textoSeguro(p, 'Há uma pendência neste cálculo.')}</li>
                       ))}
                     </ul>
                   )}
@@ -183,7 +185,7 @@ const Sugestoes = () => {
 
       {abertaObj && (
         <p className="mt-4 text-xs text-muted-foreground">
-          Memória reproduzível: mesmas entradas → mesmos passos (determinismo provado no TDD).
+          A conta é reproduzível: as mesmas entradas dão sempre os mesmos passos.
         </p>
       )}
 
@@ -219,8 +221,8 @@ const Sugestoes = () => {
                     <td>
                       {r.quantidade} {r.unidade}
                     </td>
-                    <td>não (gate mantido)</td>
-                    <td>não (gate mantido)</td>
+                    <td>não (bloqueado)</td>
+                    <td>não (bloqueado)</td>
                   </tr>
                 ))}
               </tbody>

@@ -53,6 +53,9 @@ const TrocarSenha = () => {
           <CardTitle>Trocar a senha inicial</CardTitle>
         </CardHeader>
         <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground" data-subtitulo>
+            Escolha uma senha nova para continuar usando o sistema.
+          </p>
           <form
             onSubmit={handleSubmit}
             className="space-y-4"

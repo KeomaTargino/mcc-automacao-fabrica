@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro, semInformacao, textoSeguro } from '@/lib/pcp/textos'
 import {
   obterRelatorio,
   paraCsv,
@@ -31,12 +33,13 @@ const baixar = (nome: string, csv: string) => {
 const Rodape = ({ r }: { r: RodapeRelatorio }) => (
   <div className="mt-3 border-t pt-2 text-xs text-muted-foreground space-y-1">
     <div>
-      Período {r.periodo.de} a {r.periodo.ate} · fonte: {r.fonte} · atualizado em{' '}
+      Período {r.periodo.de} a {r.periodo.ate} · fonte: {textoSeguro(r.fonte, 'sistema')} ·
+      atualizado em{' '}
       {r.atualizado_em ? new Date(r.atualizado_em).toLocaleString('pt-BR') : 'sem registro'}
     </div>
     {r.lacunas.map((l) => (
       <div key={l} className="text-amber-800">
-        Lacuna: {l}
+        Lacuna: {textoSeguro(l, 'falta informação neste bloco')}
       </div>
     ))}
   </div>
@@ -93,7 +96,7 @@ const Compras = ({ d }: { d: RelatorioCompras }) => (
   </div>
 )
 
-const semDado = (v: number | null) => (v === null ? 'sem dado' : v.toLocaleString('pt-BR'))
+const semDado = (v: number | null) => (v === null ? semInformacao() : v.toLocaleString('pt-BR'))
 
 const Producao = ({ d }: { d: RelatorioProducao }) => (
   <div className="text-sm space-y-2">
@@ -208,11 +211,19 @@ const Relatorios = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Relatórios comparativos</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Cada bloco mostra período, fonte, hora da atualização e lacunas, e só aparece para quem tem
-        a área correspondente. Unidades diferentes não se somam, bloco sem registro mostra "sem
-        dados no período" e a diferença de consumo nunca é chamada de perda sem declaração.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        Produção, consumo, compras e pedidos de um período, lado a lado.
       </p>
+      <ComoFunciona>
+        <p>
+          Cada bloco mostra período, fonte, hora da atualização e lacunas, e só aparece para quem
+          tem a área correspondente.
+        </p>
+        <p>
+          Unidades diferentes não se somam, bloco sem registro mostra “sem dados no período” e a
+          diferença de consumo nunca é chamada de perda sem declaração.
+        </p>
+      </ComoFunciona>
       <div className="mb-4 flex flex-wrap items-end gap-3 text-sm">
         <label className="block">
           De
@@ -273,7 +284,7 @@ const Relatorios = () => {
           )
         })}
         {Object.keys(res).length > 0 && Object.values(res).every((x) => x === 'sem_acesso') && (
-          <p className="text-sm">Sua conta não tem acesso a nenhum bloco de relatório.</p>
+          <p className="text-sm">{mensagemDeErro({ status: 403 })}</p>
         )}
       </div>
     </div>

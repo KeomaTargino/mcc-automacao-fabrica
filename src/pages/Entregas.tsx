@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import ComoFunciona from '@/components/ComoFunciona'
+import { mensagemDeErro } from '@/lib/pcp/textos'
 import { obterEntregas, type EntregaCompra, type RespostaEntregas } from '@/services/pcp-compras'
 
 const data = (iso: string | null) =>
@@ -16,7 +18,7 @@ const Entregas = () => {
       .catch((e: any) =>
         setErro(
           e?.status === 403
-            ? 'Sua conta não tem acesso a esta tela.'
+            ? mensagemDeErro(e)
             : 'Não foi possível carregar as entregas agora. Tente de novo em instantes.',
         ),
       )
@@ -34,10 +36,15 @@ const Entregas = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Entregas de compra</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        O que está em aberto nos pedidos de compra do Omie: pedido, item, data prevista, pedida,
-        recebida, restante e dias de atraso. É só leitura; nada é alterado no Omie.
+      <p className="text-sm text-muted-foreground mb-3" data-subtitulo>
+        O que está em aberto nos pedidos de compra do Omie. É só leitura.
       </p>
+      <ComoFunciona>
+        <p>
+          Cada linha mostra pedido, item, data prevista, quantidade pedida, recebida, restante e
+          dias de atraso. Nada é alterado no Omie por esta tela.
+        </p>
+      </ComoFunciona>
       {erro && (
         <div
           className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
