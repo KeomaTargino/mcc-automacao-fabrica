@@ -32,9 +32,13 @@ export default function ProtectedArea({ area, children }: { area: string; childr
           setEstado('trocar_senha')
           return
         }
-        // `area` aceita alternativas separadas por "|" (ex.: "conferir_expedicao|painel").
+        // `area` aceita alternativas separadas por "|" (ex.: "conferir_expedicao|painel") e "*" para
+        // qualquer perfil ativo (tela inicial, SPEC-4-003).
         const aceitas = area.split('|')
-        if (perfilRes.perfil && aceitas.some((a) => perfilRes.perfil!.areas.includes(a)))
+        if (
+          perfilRes.perfil &&
+          (aceitas.includes('*') || aceitas.some((a) => perfilRes.perfil!.areas.includes(a)))
+        )
           setEstado('autorizado')
         else if (perfilRes.motivo === 'perfil_inativo') setEstado('perfil_inativo')
         else if (perfilRes.perfil) setEstado('sem_permissao')

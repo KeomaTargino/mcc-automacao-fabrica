@@ -55,7 +55,7 @@ const App = () => (
             <Route
               path="/"
               element={
-                <ProtectedArea area="painel">
+                <ProtectedArea area="*">
                   <Index />
                 </ProtectedArea>
               }
