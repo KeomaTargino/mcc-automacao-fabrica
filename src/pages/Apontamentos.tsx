@@ -15,6 +15,15 @@ import {
 import { obterPerfil } from '@/services/pcp-access'
 import ComoFunciona from '@/components/ComoFunciona'
 import { textoSeguro } from '@/lib/pcp/textos'
+import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   lerEstadoProducao,
   registrarApontamentoServidor,
@@ -88,6 +97,12 @@ const Apontamentos = () => {
     const r = await registrarApontamentoServidor(corpo)
     const m = mensagemDoApontamento(r.http, r.corpo)
     setResultado(textoSeguro(m.texto, 'Não foi possível registrar. Tente de novo.'))
+    if (m.ok) toast.success(textoSeguro(m.texto, 'Apontamento registrado.'), { duration: 4000 })
+    else
+      toast.error(textoSeguro(m.texto, 'Não foi possível registrar.'), {
+        duration: Infinity,
+        closeButton: true,
+      })
     if (!m.manterId) tentativa.current = null
     if (m.recarregar) await carregar()
     setEnviando(false)
@@ -127,19 +142,31 @@ const Apontamentos = () => {
     }
   }
 
-  const retificar = async (e: EventoLido) => {
-    const nova = window.prompt('Nova quantidade (o motivo será pedido a seguir):')
-    if (nova === null) return
-    const q = Number(nova)
-    const m = window.prompt('Motivo da retificação (obrigatório):')
-    if (!m || !m.trim()) {
-      setResultado('Retificação exige motivo.')
+  const [retif, setRetif] = useState<EventoLido | null>(null)
+  const [novaQtd, setNovaQtd] = useState('')
+  const [motivoRetif, setMotivoRetif] = useState('')
+  const [erroRetif, setErroRetif] = useState('')
+
+  const retificar = (e: EventoLido) => {
+    setRetif(e)
+    setNovaQtd('')
+    setMotivoRetif('')
+    setErroRetif('')
+  }
+
+  const salvarRetificacao = async () => {
+    if (!retif) return
+    const q = Number(novaQtd.replace(',', '.'))
+    if (novaQtd.trim() === '' || !Number.isFinite(q) || q < 0) {
+      setErroRetif('Informe uma quantidade válida.')
       return
     }
-    if (!Number.isFinite(q) || q < 0) {
-      setResultado('Informe uma quantidade válida.')
+    if (!motivoRetif.trim()) {
+      setErroRetif('Retificação exige motivo.')
       return
     }
+    const e = retif
+    setRetif(null)
     await enviar({
       evento_id: novoEventoId(),
       op_id: e.op_id,
@@ -148,7 +175,7 @@ const Apontamentos = () => {
       item: e.item,
       quantidade: q,
       unidade: e.unidade,
-      motivo: m.trim(),
+      motivo: motivoRetif.trim(),
       retifica: e.evento_id,
     })
   }
@@ -392,6 +419,41 @@ const Apontamentos = () => {
           </CardContent>
         </Card>
       )}
+      <Dialog open={retif !== null} onOpenChange={(a) => !a && setRetif(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Corrigir apontamento</DialogTitle>
+            <DialogDescription>
+              O registro original não é apagado: a correção cria um novo registro com o motivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <label className="block space-y-1">
+              <span className="text-muted-foreground">Nova quantidade</span>
+              <Input
+                inputMode="decimal"
+                value={novaQtd}
+                onChange={(e) => setNovaQtd(e.target.value)}
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-muted-foreground">Motivo da correção (obrigatório)</span>
+              <Input value={motivoRetif} onChange={(e) => setMotivoRetif(e.target.value)} />
+            </label>
+            {erroRetif && (
+              <p className="text-sm text-destructive" role="alert">
+                {erroRetif}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetif(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={salvarRetificacao}>Salvar correção</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
