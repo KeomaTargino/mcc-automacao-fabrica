@@ -1,38 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  registrarEvento,
-  retificarEvento,
-  consumoLiquido,
-  OP_DEMO,
-  FICHA_DEMO,
-  SESSAO_DEMO,
-  type EventoApontamento,
-  type TipoEvento,
-  type Ponto,
-} from '@/lib/pcp/apontamento'
+  assinaturaDoFormulario,
+  mensagemDoApontamento,
+  novoEventoId,
+  resumoDaOrdem,
+  validarFormulario,
+  type EventoLido,
+  type TipoApontamento,
+} from '@/lib/pcp/apontamento-servidor'
+import { obterPerfil } from '@/services/pcp-access'
 import {
-  somaRealizadoPonto,
-  projetarOP,
-  encerrarPonto,
-  podeRegistrarAposEncerramento,
-  type EventoPonto,
-} from '@/lib/pcp/ponto'
-import { buscarEventoPorUUID, retificarComGuardas } from '@/lib/pcp/retificacao'
-import { saldoFirme } from '@/lib/pcp/pedidos-firmes'
-import {
-  ativarLote,
-  janela90,
-  marcarPaginaFalha,
-  novoEstado,
-  registrarPagina,
-  restanteReceber,
-} from '@/lib/pcp/importacao-90d'
+  lerEstadoProducao,
+  registrarApontamentoServidor,
+  type EstadoProducao,
+} from '@/services/pcp-producao'
 
-const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
+// Apontamentos: a cozinha e o encaixotamento gravam no servidor (SPEC-4-001). O identificador do evento
+// nasce aqui e é reaproveitado no reenvio da mesma tentativa, para o servidor reconhecer a repetição.
+// A tela relê o estado a cada 30 segundos e quando volta a ter foco.
+const TIPOS: { tipo: TipoApontamento; rotulo: string }[] = [
   { tipo: 'retirada', rotulo: 'Retirada' },
   { tipo: 'adicional', rotulo: 'Adicional' },
   { tipo: 'devolucao', rotulo: 'Devolução' },
@@ -41,576 +31,361 @@ const TIPOS: { tipo: TipoEvento; rotulo: string }[] = [
 ]
 
 const Apontamentos = () => {
-  const [eventos, setEventos] = useState<EventoApontamento[]>([])
-  const [tipo, setTipo] = useState<TipoEvento>('retirada')
-  const [quantidade, setQuantidade] = useState('1')
+  const [estado, setEstado] = useState<EstadoProducao | null>(null)
+  const [pontos, setPontos] = useState<string[]>([])
+  const [erroCarga, setErroCarga] = useState(false)
+  const [opId, setOpId] = useState('')
+  const [ponto, setPonto] = useState('')
+  const [tipo, setTipo] = useState<TipoApontamento>('retirada')
+  const [item, setItem] = useState('')
+  const [quantidade, setQuantidade] = useState('')
+  const [unidade, setUnidade] = useState('KG')
   const [motivo, setMotivo] = useState('')
   const [resultado, setResultado] = useState('')
-  const [opPublicada] = useState(OP_DEMO.estado)
+  const [enviando, setEnviando] = useState(false)
+  const tentativa = useRef<{ id: string; assinatura: string } | null>(null)
 
-  // ---- Task 64ac4f85: produção por ponto (oráculos da SPEC-2-003) ----
-  const EP = (id: string, tipo: any, qtd: number, extra: any = {}): EventoPonto => ({
-    id,
-    op_id: 'OP-1',
-    op_versao: 1,
-    tipo,
-    item: tipo.startsWith('realizado') ? null : 'INS-1',
-    quantidade: qtd,
-    unidade: tipo.startsWith('realizado') ? 'UN' : 'KG',
-    ponto:
-      tipo === 'realizado_cozinha'
-        ? 'cozinha'
-        : tipo === 'realizado_encaixotamento'
-          ? 'encaixotamento'
-          : 'cozinha',
-    autor: 'demonstracao',
-    criado_em: new Date().toISOString(),
-    ...extra,
-  })
-  const eventosPonto: EventoPonto[] = [
-    EP('d1', 'retirada', 6),
-    EP('d2', 'realizado_cozinha', 40),
-    EP('d3', 'realizado_cozinha', 60, { autor: 'equipe' }),
-    EP('d4', 'realizado_encaixotamento', 98, { ponto: 'encaixotamento' }),
-  ]
-  const FICHA_PONTO = {
-    base_produto: 100,
-    unidade_produto: 'UN',
-    componente: { insumo: 'INS-1', quantidade: 5, unidade: 'KG' },
-  }
-  const projecao = projetarOP(eventosPonto, FICHA_PONTO)
-  const encerraCozinha = () =>
-    encerrarPonto({
-      eventos: eventosPonto,
-      ponto: 'cozinha',
-      ficha: FICHA_PONTO,
-      sessao: { pontos: ['cozinha', 'encaixotamento'] },
-      encerramentos: [],
-      estadoOP: 'publicada',
-      envio: null,
-      autor: 'demonstracao',
-    })
-  const congelado = podeRegistrarAposEncerramento({ encerrado: true, envio: 'enviando' })
-  const invalidacao = podeRegistrarAposEncerramento({ encerrado: true, envio: null })
-  const somaCozinha = somaRealizadoPonto(eventosPonto, 'cozinha')
-  const somaEncaix = somaRealizadoPonto(eventosPonto, 'encaixotamento')
-  const ins = projecao.consumo.find((c) => c.item === 'INS-1')
-  const encerramento = encerraCozinha()
-  const hashEncerramento = encerramento.estado !== 'negado' ? encerramento.registro.hash : '—'
+  const carregar = useCallback(async () => {
+    try {
+      const [e, p] = await Promise.all([lerEstadoProducao(), obterPerfil()])
+      setEstado(e)
+      setPontos(p.perfil?.pontos ?? [])
+      setErroCarga(e === null)
+    } catch {
+      setErroCarga(true)
+    }
+  }, [])
 
-  // ---- Task 0096ab26: retificações sem duplicar eventos (oráculos T2/T3/T4/T5) ----
-  const ORIG = {
-    evento_id: 'EV-001',
-    op_id: 'OP-1',
-    op_versao: 1,
-    ponto: 'cozinha',
-    tipo: 'retirada',
-    item: 'INS-1',
-    quantidade: 6,
-    unidade: 'KG',
-    autor: 'demonstracao',
-  }
-  const ALVO_OP = { op_id: 'OP-1', op_versao: 1 }
-  const retOk = {
-    original: ORIG,
-    op_alvo: ALVO_OP,
-    novaQuantidade: 5.8,
-    motivo: 'conferência da balança',
-    novoId: 'EV-002',
-    estadoOP: 'publicada',
-    envio: 'nao_iniciado',
-    existentes: [ORIG],
-    pontosSessao: ['cozinha'],
-    autor: 'demonstracao',
-  }
-  const ret1 = retificarComGuardas(retOk)
-  const retReplay = retificarComGuardas({ ...retOk, existentes: [ORIG, ret1.evento] })
-  const ret409 = retificarComGuardas({
-    ...retOk,
-    novaQuantidade: 5,
-    existentes: [ORIG, ret1.evento],
-  })
-  const retAnula = retificarComGuardas({
-    ...retOk,
-    novaQuantidade: 0,
-    motivo: 'lançamento errôneo',
-  })
-  const retCongela = retificarComGuardas({ ...retOk, envio: 'enviando' })
-  const retVersao = retificarComGuardas({ ...retOk, op_alvo: { op_id: 'OP-1', op_versao: 2 } })
-  const consultaUUID = buscarEventoPorUUID([ORIG], 'EV-001')
-  const liquidoEficaz = ret1.estado !== 'negado' ? ret1.evento.quantidade : 0
+  useEffect(() => {
+    carregar()
+    const timer = window.setInterval(carregar, 30000)
+    const aoFocar = () => carregar()
+    window.addEventListener('focus', aoFocar)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', aoFocar)
+    }
+  }, [carregar])
 
-  // ---- Task 9318a299: oráculos T5 dos pedidos firmes (mapa sintético-v1) ----
-  const MAPA = {
-    versao: 'sintetico-v1',
-    status_elegiveis: ['autorizado', 'faturado', 'parcial'],
-    campo_data: 'data_operacional' as const,
-    horizonte_de: '2026-07-24',
-    horizonte_ate: '2026-10-21',
-  }
-  const LIN = (o: Record<string, unknown>) => ({
-    pedido_id: 'P1',
-    linha_id: 'L1',
-    produto_id: 'PRD-1',
-    unidade: 'UN',
-    quantidade_pedida: 20,
-    quantidade_atendida: 5,
-    status: 'faturado',
-    data_operacional: '2026-10-01',
-    ...o,
-  })
-  const pf15 = saldoFirme([LIN({})], MAPA)
-  const pfExcl = saldoFirme(
-    [
-      LIN({ linha_id: 'A', status: 'cancelado' }),
-      LIN({ linha_id: 'B', data_operacional: '2026-05-01' }),
-    ],
-    MAPA,
+  const ordens = estado?.programacao?.ops ?? []
+  const pontoAtual = ponto || pontos[0] || ''
+  const opAtual = opId || ordens[0]?.op_id || ''
+  const ordemAtual = ordens.find((o) => o.op_id === opAtual) ?? null
+  const eventos = useMemo<EventoLido[]>(
+    () => (estado?.eventos ?? []).filter((e) => e.op_id === opAtual) as EventoLido[],
+    [estado, opAtual],
   )
-  const pfReplay = saldoFirme([LIN({}), LIN({})], MAPA)
-  const pfBloq = saldoFirme([LIN({ status: 'nao_sei' })], MAPA)
-  const pfBorda = saldoFirme(
-    [
-      LIN({ data_operacional: '2026-07-24' }),
-      LIN({ linha_id: 'B', data_operacional: '2026-10-21' }),
-    ],
-    MAPA,
-  )
-  const pfRuim = saldoFirme([LIN({ quantidade_pedida: 5, quantidade_atendida: 8 })], MAPA)
-
-  // ---- Task e6aa4afa: importação 90 dias (oráculos CA-D4) ----
-  const J90 = janela90('2026-10-21')
-  const imp = novoEstado('vendas_90d')
-  imp.geracaoAtiva = 1
-  imp.geracoes = { 1: { paginasOk: [1], chaves: ['omie:vendas_90d:D0:L0'], falhas: [] } }
-  const impPag1 = registrarPagina(
-    imp,
-    2,
-    1,
-    [
-      {
-        documento_id: 'DOC-1',
-        linha_id: 'L1',
-        produto_id: '9337428906',
-        local_id: null,
-        unidade_oficial: 'UN',
-        quantidade: 10,
-        tipo_status: 'faturado',
-        data_operacional: '2026-10-01',
-        referencia: null,
-      },
-      {
-        documento_id: 'DOC-1',
-        linha_id: 'L1',
-        produto_id: '9337428906',
-        local_id: null,
-        unidade_oficial: 'UN',
-        quantidade: 10,
-        tipo_status: 'faturado',
-        data_operacional: '2026-10-01',
-        referencia: null,
-      },
-      {
-        documento_id: 'DOC-2',
-        linha_id: 'L2',
-        produto_id: '9337428906',
-        local_id: null,
-        unidade_oficial: 'UN',
-        quantidade: 4,
-        tipo_status: 'faturado',
-        data_operacional: '2026-05-01',
-        referencia: null,
-      },
-    ],
-    'omie',
-    J90,
-  )
-  marcarPaginaFalha(imp, 2, 2)
-  const impAtivaFalha = ativarLote(imp, 2, 2)
-  registrarPagina(
-    imp,
-    2,
-    2,
-    [
-      {
-        documento_id: 'DOC-3',
-        linha_id: 'L3',
-        produto_id: '9337428906',
-        local_id: null,
-        unidade_oficial: 'UN',
-        quantidade: 6,
-        tipo_status: 'faturado',
-        data_operacional: '2026-10-20',
-        referencia: null,
-      },
-    ],
-    'omie',
-    J90,
-  )
-  const impAtivaOk = ativarLote(imp, 2, 2)
-  const MAPAC = {
-    versao: 'sintetico-v1',
-    status_elegiveis: ['aprovado', 'confirmado', 'parcial'],
-    status_excluidos: ['cancelado'],
-    horizonte_de: '2026-07-24',
-    horizonte_ate: '2026-10-21',
-  }
-  const CC = (o: Record<string, unknown>) => ({
-    pedido_id: 'PC-1',
-    linha_id: 'A',
-    produto_id: 'M084073',
-    unidade_oficial: 'KG',
-    quantidade_pedida: 20,
-    quantidade_recebida: 5,
-    data_prevista_local: '2026-10-10',
-    status_origem: 'aprovado',
-    ...o,
-  })
-  const cr15 = restanteReceber([CC({})], MAPAC)
-  const crBloq = restanteReceber([CC({ status_origem: 'nao_sei' })], MAPAC)
-  const crCancel = restanteReceber(
-    [CC({ status_origem: 'cancelado' }), CC({ linha_id: 'B', data_prevista_local: '2026-05-01' })],
-    MAPAC,
-  )
-
-  const realizadoEficaz = useMemo(
-    () =>
-      eventos
-        .filter((e) => e.tipo === 'realizado' && !eventos.some((x) => x.retifica === e.evento_id))
-        .reduce((s, e) => s + e.quantidade, 0),
+  const resumo = useMemo(() => resumoDaOrdem(eventos, opAtual), [eventos, opAtual])
+  const retificados = useMemo(
+    () => new Set(eventos.filter((e) => e.retifica).map((e) => e.retifica as string)),
     [eventos],
   )
-  const consumo = useMemo(
-    () =>
-      consumoLiquido(
-        eventos,
-        FICHA_DEMO,
-        realizadoEficaz,
-        realizadoEficaz > 0 || eventos.some((e) => e.tipo === 'realizado') ? 'UN' : null,
-      ),
-    [eventos, realizadoEficaz],
-  )
 
-  const registrar = () => {
+  const enviar = async (corpo: Parameters<typeof registrarApontamentoServidor>[0]) => {
+    setEnviando(true)
+    const r = await registrarApontamentoServidor(corpo)
+    const m = mensagemDoApontamento(r.http, r.corpo)
+    setResultado(m.texto)
+    if (!m.manterId) tentativa.current = null
+    if (m.recarregar) await carregar()
+    setEnviando(false)
+    return m
+  }
+
+  const registrar = async () => {
     const q = Number(quantidade)
-    const id = `EV-${Date.now()}`
-    const r = registrarEvento(
-      {
-        evento_id: id,
-        op_id: OP_DEMO.op_id,
-        ponto: 'cozinha' as Ponto,
-        tipo,
-        item: tipo === 'realizado' ? 'COOKIE-1' : 'INS-1',
-        quantidade: q,
-        unidade: tipo === 'realizado' ? 'UN' : 'KG',
-        motivo: motivo || undefined,
-        autor: 'demonstracao',
-      },
-      opPublicada,
-      eventos,
-      SESSAO_DEMO,
-    )
-    if (r.estado === 'registrado') {
-      setEventos([...eventos, r.evento])
-      setResultado(
-        `Registrado: ${r.evento.tipo} ${r.evento.quantidade} ${r.evento.unidade} (recibo ${id.slice(0, 13)}…).`,
-      )
+    const itemFinal = tipo === 'realizado' ? (ordemAtual?.produto ?? item) : item
+    const unidadeFinal = tipo === 'realizado' ? 'UN' : unidade
+    const f = { tipo, item: itemFinal, quantidade: q, unidade: unidadeFinal, motivo }
+    if (!opAtual || !pontoAtual) {
+      setResultado('Escolha a ordem e o ponto.')
+      return
+    }
+    const v = validarFormulario(f)
+    if (!v.ok) {
+      setResultado(v.motivo)
+      return
+    }
+    const assinatura = assinaturaDoFormulario(opAtual, pontoAtual, f)
+    if (!tentativa.current || tentativa.current.assinatura !== assinatura)
+      tentativa.current = { id: novoEventoId(), assinatura }
+    const m = await enviar({
+      evento_id: tentativa.current.id,
+      op_id: opAtual,
+      ponto: pontoAtual,
+      tipo,
+      item: itemFinal.trim(),
+      quantidade: q,
+      unidade: unidadeFinal.trim(),
+      motivo: motivo.trim() || undefined,
+    })
+    if (m.ok) {
+      setQuantidade('')
       setMotivo('')
-    } else if (r.estado === 'replay') {
-      setResultado('Repetição ignorada: o evento já estava registrado (idempotência).')
-    } else {
-      setResultado(`${r.estado}: ${r.motivo}`)
     }
   }
 
-  const retificar = (e: EventoApontamento) => {
-    const nova = window.prompt('Nova quantidade (motivo será pedido a seguir):')
+  const retificar = async (e: EventoLido) => {
+    const nova = window.prompt('Nova quantidade (o motivo será pedido a seguir):')
     if (nova === null) return
     const q = Number(nova)
     const m = window.prompt('Motivo da retificação (obrigatório):')
-    if (!m) {
-      setResultado('negado: Retificação exige motivo.')
+    if (!m || !m.trim()) {
+      setResultado('Retificação exige motivo.')
       return
     }
-    const r = retificarEvento(e, q, m, `EV-RET-${Date.now()}`, opPublicada, eventos, SESSAO_DEMO)
-    if (r.estado === 'registrado') {
-      setEventos([...eventos, r.evento])
-      setResultado(`Retificado: ${e.quantidade} → ${q} (original preservado no histórico).`)
-    } else {
-      setResultado(`${r.estado}: ${r.motivo}`)
+    if (!Number.isFinite(q) || q < 0) {
+      setResultado('Informe uma quantidade válida.')
+      return
     }
+    await enviar({
+      evento_id: novoEventoId(),
+      op_id: e.op_id,
+      ponto: e.ponto,
+      tipo: e.tipo,
+      item: e.item,
+      quantidade: q,
+      unidade: e.unidade,
+      motivo: m.trim(),
+      retifica: e.evento_id,
+    })
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-2">Apontamentos na origem</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Retirada, adicional, devolução, perda declarada e realizado — com autor, OP, unidade e
-        ponto. Eventos são imutáveis: correção cria retificação auditável.
+        Retirada, adicional, devolução, perda declarada e realizado, com autor, ordem, unidade e
+        ponto. Os eventos ficam guardados no servidor e são imutáveis: a correção cria uma
+        retificação com motivo.
       </p>
 
-      <div
-        className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"
-        role="status"
-      >
-        <strong>Tela de demonstração.</strong> OP sintética {OP_DEMO.op_id} (COOKIE-1), ficha 100 UN
-        → 5 KG de INS-1, ponto cozinha. A ligação com a OP publicada real e os acessos por ponto
-        reais vêm na próxima task da fase.
-      </div>
+      {erroCarga && (
+        <div
+          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          Não foi possível carregar.{' '}
+          <Button variant="outline" size="sm" onClick={carregar}>
+            Tentar de novo
+          </Button>
+        </div>
+      )}
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Retificações sem duplicar eventos — oráculos da SPEC-2-003 (0096ab26)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <p>
-            Retificar 6 → 5,8 KG: <strong>{ret1.estado}</strong> (novo evento EV-002 referencia o
-            original EV-001, que permanece no histórico) · líquido eficaz{' '}
-            <strong>{liquidoEficaz} KG</strong> · repetição idêntica:{' '}
-            <strong>{retReplay.estado}</strong> · mesmo UUID com payload diferente:{' '}
-            <strong>{ret409.estado}</strong>.
-          </p>
-          <p>
-            Anulação 6 → 0 com motivo: <strong>{retAnula.estado}</strong> · durante envio/incerto:{' '}
-            <strong>{retCongela.motivo.slice(0, 40)}…</strong> · OP/versão incompatível:{' '}
-            <strong>{retVersao.estado}</strong> · consulta por UUID após timeout: EV-001{' '}
-            <strong>{consultaUUID ? 'encontrado (nenhum evento novo)' : '—'}</strong>.
-          </p>
-        </CardContent>
-      </Card>
+      {!erroCarga && estado && ordens.length === 0 && (
+        <div
+          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          Ainda não há programação publicada. O PCP publica em Planejamento.
+        </div>
+      )}
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Pedidos firmes no horizonte — oráculos T5 da SPEC-2-001 (9318a299)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <p>
-            Mapa <strong>{MAPA.versao}</strong> (regra real só após aprovação do PCP) · confirmada
-            20, atendida 5, no horizonte → firme <strong>{pf15.total_firme}</strong> · cancelada e
-            fora do horizonte → <strong>{pfExcl.total_firme}</strong> · replay →{' '}
-            <strong>{pfReplay.total_firme}</strong>.
-          </p>
-          <p>
-            Status desconhecido →{' '}
-            <strong>
-              {pfBloq.total_firme === null ? 'null (bloqueia)' : String(pfBloq.total_firme)}
-            </strong>
-            , nunca 0 · borda do horizonte inclusiva → <strong>{pfBorda.total_firme}</strong> ·
-            atendida &gt; pedida →{' '}
-            <strong>
-              {pfRuim.total_firme === null ? 'null (bloqueia)' : String(pfRuim.total_firme)}
-            </strong>
-            .
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Importação 90 dias e restante a receber — oráculos CA-D4 (e6aa4afa)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <p>
-            Janela D-89..D: {J90.de} → {J90.ate} · página 1 da geração 2: {impPag1.novas} nova(s),{' '}
-            {impPag1.repetidas} repetida(s) (replay não duplica), {impPag1.fora} fora da janela ·
-            página 2 com falha → ativação{' '}
-            <strong>{impAtivaFalha.ativado ? 'ativou (ERRO)' : 'recusada'}</strong> (
-            {impAtivaFalha.aviso ?? impAtivaFalha.motivo}).
-          </p>
-          <p>
-            Completando a geração 2 → <strong>{impAtivaOk.ativado ? 'ativada' : 'recusada'}</strong>{' '}
-            (lote anterior permaneceu até lá) · restante a receber: 20 pedida − 5 recebida ={' '}
-            <strong>{cr15.total_restante} KG</strong> · status desconhecido →{' '}
-            <strong>
-              {crBloq.total_restante === null ? 'null (bloqueia)' : String(crBloq.total_restante)}
-            </strong>{' '}
-            · cancelada/fora do horizonte → <strong>{crCancel.total_restante}</strong>.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Produção por ponto — oráculos da SPEC-2-003 (64ac4f85)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <p>
-            Incrementos por execução: cozinha 40 + 60 = <strong>{somaCozinha}</strong> (não
-            substituem) · encaixotamento <strong>{somaEncaix}</strong> (registro independente) ·
-            previsto pela ficha (só cozinha): <strong>{projecao.previsto} KG</strong> · retirada 6
-            KG → líquido {ins?.liquido} = diferença <strong>+{ins?.diferenca}</strong>.
-          </p>
-          <p>
-            Encerramento do ponto cozinha: <strong>{encerramento.estado}</strong> com hash{' '}
-            <span className="font-mono text-xs">{hashEncerramento.slice(0, 34)}…</span> · declaração
-            zero com motivo encerra · sem realizado (ou zero sem motivo) nega · evento após
-            encerramento invalida{' '}
-            <strong>{invalidacao.ok ? invalidacao.invalida.join(' + ') : '—'}</strong> · durante
-            envio/incerto:{' '}
-            <strong>{congelado.ok ? 'permitido' : congelado.motivo.slice(0, 60)}</strong>
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Registrar evento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-wrap gap-1">
-              {TIPOS.map((t) => (
-                <Button
-                  key={t.tipo}
-                  size="sm"
-                  variant={tipo === t.tipo ? 'default' : 'outline'}
-                  onClick={() => setTipo(t.tipo)}
-                >
-                  {t.rotulo}
-                </Button>
-              ))}
-            </div>
-            <label className="block space-y-1">
-              <span className="text-muted-foreground">
-                Quantidade ({tipo === 'realizado' ? 'UN' : 'KG'})
-              </span>
-              <Input
-                type="number"
-                step="0.1"
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-              />
-            </label>
-            {(tipo === 'realizado' || Number(quantidade) === 0) && (
+      {ordens.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Registrar evento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="text-muted-foreground">Ordem</span>
+                  <select
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    value={opAtual}
+                    onChange={(e) => setOpId(e.target.value)}
+                  >
+                    {ordens.map((o) => (
+                      <option key={o.op_id} value={o.op_id}>
+                        {o.op_id} · {o.produto} · {o.data}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-muted-foreground">Ponto</span>
+                  <select
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    value={pontoAtual}
+                    onChange={(e) => setPonto(e.target.value)}
+                  >
+                    {pontos.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {TIPOS.map((t) => (
+                  <Button
+                    key={t.tipo}
+                    size="sm"
+                    variant={tipo === t.tipo ? 'default' : 'outline'}
+                    onClick={() => setTipo(t.tipo)}
+                  >
+                    {t.rotulo}
+                  </Button>
+                ))}
+              </div>
+              {tipo !== 'realizado' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="space-y-1">
+                    <span className="text-muted-foreground">Item</span>
+                    <Input value={item} onChange={(e) => setItem(e.target.value)} />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-muted-foreground">Unidade</span>
+                    <Input value={unidade} onChange={(e) => setUnidade(e.target.value)} />
+                  </label>
+                </div>
+              )}
               <label className="block space-y-1">
-                <span className="text-muted-foreground">Motivo (obrigatório para realizado 0)</span>
+                <span className="text-muted-foreground">
+                  Quantidade ({tipo === 'realizado' ? 'UN' : unidade})
+                </span>
                 <Input
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Ex.: linha parada por manutenção"
+                  type="number"
+                  step="0.1"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
                 />
               </label>
-            )}
-            <Button size="sm" onClick={registrar}>
-              Registrar
-            </Button>
-            {resultado && (
-              <div className="rounded-md border px-3 py-2 text-xs bg-muted" role="status">
-                {resultado}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {(tipo === 'realizado' || Number(quantidade) === 0) && (
+                <label className="block space-y-1">
+                  <span className="text-muted-foreground">
+                    Motivo (obrigatório para realizado 0)
+                  </span>
+                  <Input
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Ex.: linha parada por manutenção"
+                  />
+                </label>
+              )}
+              <Button size="sm" onClick={registrar} disabled={enviando || pontos.length === 0}>
+                Registrar
+              </Button>
+              {pontos.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Sua conta não tem ponto de apontamento.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Consumo por item (ficha: 100 UN → 5 KG)</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-2">
-            {consumo.length === 0 && (
-              <p className="text-muted-foreground">Nenhum evento de consumo ainda.</p>
-            )}
-            {consumo.map((c) => (
-              <div key={`${c.item}|${c.unidade}`} className="rounded-md border px-3 py-2">
-                <div className="flex items-center justify-between">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Resumo da ordem {opAtual}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {Object.keys(resumo.realizado).length > 0 && (
+                <p>
+                  Realizado:{' '}
+                  {Object.entries(resumo.realizado).map(([p, q]) => (
+                    <Badge key={p} variant="outline" className="mr-1">
+                      {p} {q}
+                    </Badge>
+                  ))}
+                </p>
+              )}
+              {resumo.itens.length === 0 && Object.keys(resumo.realizado).length === 0 && (
+                <p className="text-muted-foreground">Nenhum evento registrado nessa ordem.</p>
+              )}
+              {resumo.itens.map((c) => (
+                <div key={`${c.item}|${c.unidade}`} className="rounded-md border px-3 py-2">
                   <strong>
                     {c.item} <span className="font-mono text-xs">({c.unidade})</span>
                   </strong>
-                  {c.calculo_disponivel ? (
-                    <Badge
-                      className={
-                        Math.abs(c.diferenca ?? 0) < 1e-9
-                          ? 'bg-green-100 text-green-900 border-green-300'
-                          : 'bg-amber-100 text-amber-900 border-amber-300'
-                      }
-                    >
-                      {c.diferenca! > 0 ? '+' : ''}
-                      {c.diferenca!.toFixed(2)} vs previsto
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="border-amber-300 text-amber-900">
-                      cálculo indisponível
-                    </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Líquido {c.liquido.toFixed(2)} = retiradas {c.retiradas.toFixed(2)} + adicionais{' '}
+                    {c.adicionais.toFixed(2)} − devoluções {c.devolucoes.toFixed(2)}
+                  </p>
+                  {c.perda_declarada > 0 && (
+                    <p className="text-xs text-orange-700">
+                      Perda declarada (separada, não somada ao líquido):{' '}
+                      {c.perda_declarada.toFixed(2)}
+                    </p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Líquido {c.liquido.toFixed(2)} = retiradas {c.retiradas.toFixed(2)} + adicionais{' '}
-                  {c.adicionais.toFixed(2)} − devoluções {c.devolucoes.toFixed(2)}
-                  {c.calculo_disponivel && ` · previsto ${(c.previsto ?? 0).toFixed(2)}`}
-                </p>
-                {c.perda_declarada > 0 && (
-                  <p className="text-xs text-orange-700">
-                    Perda declarada (separada, não somada ao líquido):{' '}
-                    {c.perda_declarada.toFixed(2)}
-                  </p>
-                )}
-              </div>
-            ))}
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {resultado && (
+        <div className="mt-4 rounded-md border px-3 py-2 text-xs bg-muted" role="status">
+          {resultado}
+        </div>
+      )}
+
+      {ordens.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Eventos da ordem ({eventos.length}) — imutáveis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {eventos.length === 0 && (
+              <p className="text-muted-foreground">Nenhum evento registrado.</p>
+            )}
+            {eventos.length > 0 && (
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="pb-2">Tipo</th>
+                    <th className="pb-2">Item</th>
+                    <th className="pb-2">Qtd</th>
+                    <th className="pb-2">Ponto</th>
+                    <th className="pb-2">Autor</th>
+                    <th className="pb-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eventos.map((e) => (
+                    <tr
+                      key={e.evento_id}
+                      className={retificados.has(e.evento_id) ? 'opacity-60' : ''}
+                    >
+                      <td>
+                        {e.tipo}
+                        {e.retifica && (
+                          <span className="ml-1 text-xs text-muted-foreground">(retificação)</span>
+                        )}
+                        {retificados.has(e.evento_id) && (
+                          <span className="ml-1 text-xs text-muted-foreground">(retificado)</span>
+                        )}
+                      </td>
+                      <td>{e.item}</td>
+                      <td>
+                        {e.quantidade} {e.unidade}
+                      </td>
+                      <td>{e.ponto}</td>
+                      <td className="text-xs">{e.autor}</td>
+                      <td>
+                        {!retificados.has(e.evento_id) && pontos.includes(e.ponto) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={enviando}
+                            onClick={() => retificar(e)}
+                          >
+                            Retificar
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </CardContent>
         </Card>
-      </div>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Eventos da OP ({eventos.length}) — imutáveis</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm">
-          {eventos.length === 0 && (
-            <p className="text-muted-foreground">Nenhum evento registrado.</p>
-          )}
-          {eventos.length > 0 && (
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="pb-2">ID</th>
-                  <th className="pb-2">Tipo</th>
-                  <th className="pb-2">Item</th>
-                  <th className="pb-2">Qtd</th>
-                  <th className="pb-2">Ponto</th>
-                  <th className="pb-2">Retifica</th>
-                  <th className="pb-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {eventos.map((e) => (
-                  <tr key={e.evento_id} className={e.retifica ? 'opacity-60' : ''}>
-                    <td className="py-1 font-mono text-xs">{e.evento_id.slice(0, 14)}…</td>
-                    <td>
-                      {e.tipo}
-                      {e.retifica && (
-                        <span className="ml-1 text-xs text-muted-foreground">(retificação)</span>
-                      )}
-                    </td>
-                    <td>{e.item}</td>
-                    <td>
-                      {e.quantidade} {e.unidade}
-                    </td>
-                    <td>{e.ponto}</td>
-                    <td className="font-mono text-xs">
-                      {e.retifica ? e.retifica.slice(0, 10) + '…' : '—'}
-                    </td>
-                    <td>
-                      {!e.retifica && (
-                        <Button variant="outline" size="sm" onClick={() => retificar(e)}>
-                          Retificar
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      )}
     </div>
   )
 }
