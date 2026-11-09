@@ -59,17 +59,137 @@ routerAdd(
         .trim()
         .toUpperCase()
 
-    if (bloco === 'producao' || bloco === 'consumo') {
+    if (bloco === 'consumo') {
       return e.json(200, {
         bloco: bloco,
         linhas: [],
         rodape: rodape(
-          'apontamentos e ordens de produção',
+          'apontamentos de consumo do servidor e ficha técnica',
           null,
           [
-            'fonte não ligada: os apontamentos de produção e as ordens ainda não são guardados no servidor, então não há como somar planejado, produzido, conferido, consumo ou perdas do período',
+            'a ficha técnica real ainda não foi carregada (catálogo real, CL-PEND-006): sem a ficha não há consumo previsto para comparar com o registrado',
           ],
           true,
+        ),
+      })
+    }
+
+    if (bloco === 'producao') {
+      // Programação publicada (a última que não é de demonstração), apontamentos e conferências do servidor.
+      // Registro de demonstração fica fora. produzido = realizado da cozinha; conferido = última conferência
+      // de entrada em câmara; sem dado nunca vira zero. Regras de src/lib/pcp/producao-fontes.ts.
+      const DEMO = /DEMO|^COOKIE-1$|^INS-\d+$/i
+      const progs = $app.findRecordsByFilter(
+        'pcp_programacoes',
+        'demonstracao = false',
+        '-versao',
+        1,
+        0,
+      )
+      let ops = []
+      let atualizado = null
+      if (progs.length > 0) {
+        try {
+          ops = JSON.parse(progs[0].getString('ops') || '[]') || []
+        } catch (_) {}
+        atualizado = progs[0].getString('updated') || null
+      }
+      ops = ops.filter(
+        (o) =>
+          String(o.data) >= de &&
+          String(o.data) <= ate &&
+          !DEMO.test(String(o.produto || '')) &&
+          (!produto || norm(o.produto) === produto),
+      )
+      const eventos = $app.findRecordsByFilter(
+        'pcp_apontamentos',
+        'demonstracao = false',
+        'created',
+        20000,
+        0,
+      )
+      const confs = $app.findRecordsByFilter(
+        'pcp_conferencias_op',
+        'demonstracao = false',
+        'created',
+        20000,
+        0,
+      )
+      const retificados = {}
+      for (const ev of eventos) {
+        const r = ev.getString('retifica')
+        if (r) retificados[r] = true
+      }
+      const grupos = {}
+      let semApontamento = 0
+      let semConferencia = 0
+      for (const o of ops) {
+        let produzido = null
+        let unidade = ''
+        for (const ev of eventos) {
+          if (
+            ev.getString('op_id') !== o.op_id ||
+            ev.getString('tipo') !== 'realizado' ||
+            ev.getString('ponto') !== 'cozinha' ||
+            retificados[ev.getString('evento_id')]
+          )
+            continue
+          produzido = (produzido === null ? 0 : produzido) + Number(ev.get('quantidade'))
+          if (!unidade) unidade = ev.getString('unidade')
+        }
+        let conferido = null
+        for (const c of confs) {
+          if (c.getString('op_id') !== o.op_id || c.getString('etapa') !== 'entrada_camara')
+            continue
+          conferido = Number(c.get('quantidade'))
+          if (!unidade) unidade = c.getString('unidade')
+        }
+        if (produzido === null) semApontamento++
+        if (conferido === null) semConferencia++
+        const un = norm(unidade) || 'UN'
+        const k = norm(o.produto) + '|' + un
+        const g =
+          grupos[k] ||
+          (grupos[k] = {
+            produto: norm(o.produto),
+            unidade: un,
+            planejado: 0,
+            produzido: 0,
+            conferido: 0,
+            ordens: 0,
+            semProduzido: false,
+            semConferido: false,
+          })
+        g.ordens++
+        g.planejado = arred(g.planejado + Number(o.quantidade))
+        if (produzido === null) g.semProduzido = true
+        else g.produzido = arred(g.produzido + produzido)
+        if (conferido === null) g.semConferido = true
+        else g.conferido = arred(g.conferido + conferido)
+      }
+      const lacunas = [
+        'produzido = realizado da cozinha; conferido = última conferência de entrada em câmara; ordem sem apontamento ou sem conferência fica sem dado (nunca zero)',
+        'a programação não traz unidade: vale a unidade dos apontamentos e das conferências da ordem e, sem nenhum, UN',
+      ]
+      if (semApontamento > 0)
+        lacunas.push(semApontamento + ' ordem(ns) sem apontamento da cozinha no período')
+      if (semConferencia > 0)
+        lacunas.push(semConferencia + ' ordem(ns) sem conferência de câmara no período')
+      return e.json(200, {
+        bloco: bloco,
+        linhas: Object.keys(grupos).map((k) => ({
+          produto: grupos[k].produto,
+          unidade: grupos[k].unidade,
+          planejado: grupos[k].planejado,
+          produzido: grupos[k].semProduzido ? null : grupos[k].produzido,
+          conferido: grupos[k].semConferido ? null : grupos[k].conferido,
+          ordens: grupos[k].ordens,
+        })),
+        rodape: rodape(
+          'programação publicada, apontamentos e conferências do servidor',
+          atualizado,
+          lacunas,
+          ops.length === 0,
         ),
       })
     }

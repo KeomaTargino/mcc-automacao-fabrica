@@ -3,10 +3,11 @@
 // Exige editar_parametros (403 sem pistas). SÓ LÊ dados locais e SÓ ESCREVE alertas e lacunas: não compra,
 // não publica ordem, não muda parâmetro, não grava no Omie e não gera ação financeira.
 // Regras de src/lib/pcp/alertas.ts (esta rota as repete, pois hooks não compartilham código).
-// Fontes ligadas hoje: compra aprovada sem pedido (pcp_requisicoes + vínculo), entrega atrasada
+// Fontes ligadas hoje: produção atrasada (programação e apontamentos do servidor, SPEC-4-001; registro
+// de demonstração fica fora), compra aprovada sem pedido (pcp_requisicoes + vínculo), entrega atrasada
 // (pcp_entregas_compra), preço fora da tolerância (cotações escolhidas contra o último preço) e pedido
 // manual parado (pcp_pedidos_manuais + preparação). AINDA SEM FONTE LIGADA: ruptura prevista (saldo e
-// consumo reais dependem da leitura do Omie, CL-PEND-006), produção atrasada (programação), divergência
+// consumo reais dependem da leitura do Omie, CL-PEND-006), divergência
 // de conferência e intenção da Nuvemshop (o pedido não traz data conhecida); a resposta os lista em
 // fontes_pendentes e nenhum alerta é inventado. Sem parâmetros aprovados: nada é calculado.
 // A mesma chave (regra + item + referência) atualiza o alerta aberto em vez de criar outro.
@@ -40,7 +41,7 @@ routerAdd(
     const lp = $app.findRecordsByFilter('pcp_parametros_alerta', '', '-versao', 1, 0)
     const fontesPendentes = [
       'estoque: saldo e consumo reais aguardam a leitura do Omie (CL-PEND-006)',
-      'produção: programação ainda não ligada à rodada',
+
       'divergência: conferências ainda não ligadas à rodada',
       'pedido (intenção da Nuvemshop): pedido sem data conhecida',
     ]
@@ -326,6 +327,57 @@ routerAdd(
         { desde: desde.toISOString(), horasParado: horas, tempoMaxHoras: tempoMax },
         desde,
       )
+    }
+
+    // RN-02: produção atrasada — ordem da programação publicada (a última que não é de demonstração),
+    // sem nenhum apontamento, depois do dia programado. Registro de demonstração fica fora.
+    const hojeIso = agora.toISOString().slice(0, 10)
+    const PADRAO_DEMO = /DEMO|^COOKIE-1$|^INS-\d+$/i
+    const progAtual = $app.findRecordsByFilter(
+      'pcp_programacoes',
+      'demonstracao = false',
+      '-versao',
+      1,
+      0,
+    )
+    if (progAtual.length > 0) {
+      let opsProg = []
+      try {
+        opsProg = JSON.parse(progAtual[0].getString('ops') || '[]') || []
+      } catch (_) {}
+      const iniciadas = {}
+      for (const ev of $app.findRecordsByFilter(
+        'pcp_apontamentos',
+        'demonstracao = false',
+        'created',
+        20000,
+        0,
+      ))
+        iniciadas[ev.getString('op_id')] = true
+      const dadoProg = new Date(progAtual[0].getString('publicada_em') || agora.toISOString())
+      for (const o of opsProg) {
+        if (PADRAO_DEMO.test(String(o.produto || ''))) continue
+        if (iniciadas[o.op_id] || String(o.data) >= hojeIso) continue
+        if (!grav.producao) {
+          lac(
+            'producao',
+            o.produto,
+            'gravidade',
+            'gravidade do alerta producao não definida na versão aprovada',
+          )
+          continue
+        }
+        const atraso = Math.round((hojeMs - new Date(o.data).getTime()) / DIA)
+        gerar(
+          'producao',
+          o.produto,
+          o.op_id,
+          grav.producao,
+          'ordem programada não iniciada depois do dia programado',
+          { diaProgramado: o.data, diasDeAtraso: atraso },
+          isNaN(dadoProg.getTime()) ? agora : dadoProg,
+        )
+      }
     }
 
     // Regra desligada (SPEC-3-011): para de gerar alertas do tipo; os que já existem e o histórico ficam.

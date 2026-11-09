@@ -6,6 +6,7 @@ import {
   paraCsv,
   type RelatorioCompras,
   type RelatorioPedidos,
+  type RelatorioProducao,
   type RelatorioQualquer,
   type RodapeRelatorio,
 } from '@/services/pcp-relatorios'
@@ -80,6 +81,49 @@ const Compras = ({ d }: { d: RelatorioCompras }) => (
               paraCsv(
                 ['unidade', 'comprado', 'recebido'],
                 d.por_unidade.map((u) => [u.unidade, u.comprado, u.recebido]),
+              ),
+            )
+          }
+        >
+          Exportar planilha
+        </Button>
+      </>
+    )}
+    <Rodape r={d.rodape} />
+  </div>
+)
+
+const semDado = (v: number | null) => (v === null ? 'sem dado' : v.toLocaleString('pt-BR'))
+
+const Producao = ({ d }: { d: RelatorioProducao }) => (
+  <div className="text-sm space-y-2">
+    {d.rodape.sem_dados ? (
+      <div>sem dados no período</div>
+    ) : (
+      <>
+        {d.linhas.map((l) => (
+          <div key={l.produto + l.unidade}>
+            {l.produto} ({l.unidade}): planejado <strong>{semDado(l.planejado)}</strong> · produzido{' '}
+            <strong>{semDado(l.produzido)}</strong> · conferido{' '}
+            <strong>{semDado(l.conferido)}</strong> · {l.ordens} ordem(ns)
+          </div>
+        ))}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            baixar(
+              'producao.csv',
+              paraCsv(
+                ['produto', 'unidade', 'planejado', 'produzido', 'conferido', 'ordens'],
+                d.linhas.map((l) => [
+                  l.produto,
+                  l.unidade,
+                  l.planejado,
+                  l.produzido,
+                  l.conferido,
+                  l.ordens,
+                ]),
               ),
             )
           }
@@ -217,7 +261,8 @@ const Relatorios = () => {
                 )}
                 {r !== 'erro' && r.bloco === 'compras' && <Compras d={r as RelatorioCompras} />}
                 {r !== 'erro' && r.bloco === 'pedidos' && <Pedidos d={r as RelatorioPedidos} />}
-                {r !== 'erro' && (r.bloco === 'producao' || r.bloco === 'consumo') && (
+                {r !== 'erro' && r.bloco === 'producao' && <Producao d={r as RelatorioProducao} />}
+                {r !== 'erro' && r.bloco === 'consumo' && (
                   <div className="text-sm space-y-2">
                     <div>sem dados no período</div>
                     <Rodape r={r.rodape} />

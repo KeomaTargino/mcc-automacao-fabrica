@@ -41,13 +41,30 @@ export interface RelatorioPedidos {
   rodape: RodapeRelatorio
 }
 
+export interface RelatorioProducao {
+  bloco: 'producao'
+  linhas: {
+    produto: string
+    unidade: string
+    planejado: number
+    produzido: number | null
+    conferido: number | null
+    ordens: number
+  }[]
+  rodape: RodapeRelatorio
+}
+
 export interface RelatorioSemFonte {
-  bloco: 'producao' | 'consumo'
+  bloco: 'consumo'
   linhas: unknown[]
   rodape: RodapeRelatorio
 }
 
-export type RelatorioQualquer = RelatorioCompras | RelatorioPedidos | RelatorioSemFonte
+export type RelatorioQualquer =
+  | RelatorioCompras
+  | RelatorioPedidos
+  | RelatorioProducao
+  | RelatorioSemFonte
 
 export const obterRelatorio = (c: { bloco: string; de: string; ate: string; produto?: string }) =>
   pb.send('/backend/v1/pcp/relatorios', { method: 'GET', query: c }) as Promise<RelatorioQualquer>

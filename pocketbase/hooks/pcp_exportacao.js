@@ -71,6 +71,10 @@ routerAdd(
       'pcp_loop_config',
       'pcp_loop_medicoes',
       'pcp_assistente_perguntas',
+      'pcp_programacoes',
+      'pcp_apontamentos',
+      'pcp_conferencias_op',
+      'pcp_aprovacoes_consolidacao',
     ]
     const LEITURAS = ['pcp_dados', 'pcp_lotes', 'pcp_fontes', 'pcp_execucoes']
     const LIMITE = 20000
@@ -110,8 +114,19 @@ routerAdd(
       if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s
       return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
     }
+    // Registro marcado como demonstração (migration 0047) nunca entra no pacote de dados reais.
+    const temMarca = (nome) => {
+      try {
+        return $app.findCollectionByNameOrId(nome).fields.some((f) => f.name === 'demonstracao')
+      } catch (_) {
+        return false
+      }
+    }
     const contar = (nome) => {
       try {
+        if (temMarca(nome))
+          return $app.findRecordsByFilter(nome, 'demonstracao = false', 'created', LIMITE + 1, 0)
+            .length
         return Number($app.countRecords(nome))
       } catch (_) {
         return null
@@ -121,9 +136,10 @@ routerAdd(
       const col = $app.findCollectionByNameOrId(nome)
       const campos = col.fields.map((f) => f.name).filter((n) => !SENSIVEL.test(n))
       const linhas = []
+      const filtroReal = temMarca(nome) ? 'demonstracao = false' : ''
       let pagina = 0
       for (;;) {
-        const lote = $app.findRecordsByFilter(nome, '', 'created', 2000, pagina * 2000)
+        const lote = $app.findRecordsByFilter(nome, filtroReal, 'created', 2000, pagina * 2000)
         for (const r of lote) linhas.push(campos.map((c) => cel(r.get(c))).join(';'))
         if (lote.length < 2000 || linhas.length >= LIMITE + 1) break
         pagina++
