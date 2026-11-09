@@ -10,7 +10,14 @@ import {
   obterHistorico,
   type RespostaHistorico,
 } from '@/services/pcp-compras'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const moeda = (n: number | null) =>
@@ -188,27 +195,27 @@ const HistoricoPrecos = () => {
                       key={r.chave}
                       className={`border-b align-top ${r.estado === 'comparavel' ? '' : 'text-muted-foreground'}`}
                     >
-                      <td className="py-2 pr-3">
+                      <TableCell className="py-2 pr-3">
                         {r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
-                      </td>
-                      <td className="py-2 pr-3">{r.fornecedor ?? '—'}</td>
-                      <td className="py-2 pr-3 font-mono">{r.pedido_id}</td>
-                      <td className="py-2 pr-3">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3">{r.fornecedor ?? '—'}</TableCell>
+                      <TableCell className="py-2 pr-3 font-mono">{r.pedido_id}</TableCell>
+                      <TableCell className="py-2 pr-3">
                         {r.quantidade ?? '—'} {r.unidade ?? ''}
-                      </td>
-                      <td className="py-2 pr-3">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3">
                         {moeda(r.preco)}
                         {r.preco !== null && r.unidade ? ` / ${r.unidade}` : ''}
-                      </td>
-                      <td className="py-2">
+                      </TableCell>
+                      <TableCell className="py-2">
                         <Badge variant="outline">
                           {ROTULO_ESTADO[r.estado] ?? rotuloEstado(r.estado)}
                         </Badge>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
           {dados.documentos.length > 0 && (
