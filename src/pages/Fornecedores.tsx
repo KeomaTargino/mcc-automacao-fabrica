@@ -10,6 +10,7 @@ import {
   type ContatoFornecedor,
   type RespostaFornecedores,
 } from '@/services/pcp-compras'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const CONTATO_VAZIO: ContatoFornecedor = { nome: '', funcao: '', telefone: '', email: '' }
 
@@ -89,16 +90,16 @@ const Fornecedores = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && (
         <div
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900"
+          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-xs text-warning"
           role="status"
         >
           {textoSeguro(dados.leitura_omie, 'A lista de fornecedores do Omie ainda não foi lida')}.

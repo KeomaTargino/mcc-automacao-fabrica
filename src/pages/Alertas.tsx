@@ -18,6 +18,8 @@ import {
   type RespostaAlertas,
   type ResultadoRodada,
 } from '@/services/pcp-alertas'
+import { Skeleton } from '@/components/ui/skeleton'
+import Escolha from '@/components/Escolha'
 
 const TIPO: Record<string, string> = {
   estoque: 'Estoque',
@@ -95,9 +97,11 @@ const Cartao = ({
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">{ESTADO[a.estado] ?? rotuloEstado(a.estado)}</Badge>
         {a.gravidade === 'critico' ? (
-          <Badge className="bg-red-100 text-red-900 border-red-300">crítico</Badge>
+          <Badge className="bg-destructive/10 text-destructive border-destructive/30">
+            crítico
+          </Badge>
         ) : (
-          <Badge className="bg-amber-100 text-amber-900 border-amber-300">atenção</Badge>
+          <Badge className="bg-warning/10 text-warning border-warning/30">atenção</Badge>
         )}
         {a.fonte_desatualizada && <Badge variant="outline">dado desatualizado</Badge>}
         {a.anterior_id && <Badge variant="outline">volta de um alerta já tratado</Badge>}
@@ -137,19 +141,14 @@ const Cartao = ({
         )}
         {a.estado === 'em_analise' && a.pode_tratar && (
           <>
-            <select
-              aria-label="Ação tomada"
-              className="border rounded px-2 py-1 text-sm bg-background"
+            <Escolha
+              rotuloAria="Ação tomada"
+              className="w-64"
               value={acao}
-              onChange={(e) => setAcao(e.target.value)}
-            >
-              <option value="">registre a ação tomada</option>
-              {ACOES_TRATAMENTO.map(([v, r]) => (
-                <option key={v} value={v}>
-                  {r}
-                </option>
-              ))}
-            </select>
+              onChange={setAcao}
+              placeholder="registre a ação tomada"
+              opcoes={ACOES_TRATAMENTO.map(([v, r]) => ({ valor: v, rotulo: r }))}
+            />
             <input
               aria-label="Motivo ou descrição"
               className="border rounded px-2 py-1 text-sm w-56 bg-background"
@@ -296,7 +295,7 @@ const Alertas = () => {
       )}
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -304,7 +303,7 @@ const Alertas = () => {
       )}
       {aviso && (
         <div
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           {aviso}
@@ -315,14 +314,14 @@ const Alertas = () => {
           {rodada.executou
             ? `Rodada feita: ${rodada.criados} novos, ${rodada.atualizados} atualizados, ${rodada.lacunas} lacunas.`
             : textoSeguro(rodada.motivo, 'Os alertas não rodaram agora.')}
-          <ul className="mt-2 list-disc pl-5 text-xs text-amber-800">
+          <ul className="mt-2 list-disc pl-5 text-xs text-warning">
             {rodada.fontes_pendentes.map((f) => (
               <li key={f}>sem fonte ligada — {textoSeguro(f, 'uma fonte de dados')}</li>
             ))}
           </ul>
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && dados.alertas.length === 0 && (
         <Card>
           <CardContent className="py-6 text-sm">Nenhum alerta da sua área.</CardContent>

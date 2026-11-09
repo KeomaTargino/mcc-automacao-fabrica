@@ -4,6 +4,15 @@ import { Badge } from '@/components/ui/badge'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro } from '@/lib/pcp/textos'
 import { obterEntregas, type EntregaCompra, type RespostaEntregas } from '@/services/pcp-compras'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const data = (iso: string | null) =>
   iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : 'sem previsão'
@@ -47,13 +56,13 @@ const Entregas = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && (
         <p className="mb-4 text-xs text-muted-foreground">
           {dados.ultima_leitura
@@ -79,33 +88,35 @@ const Entregas = () => {
               )}
             </h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="py-2 pr-3">Pedido</th>
-                    <th className="py-2 pr-3">Item</th>
-                    <th className="py-2 pr-3">Previsto</th>
-                    <th className="py-2 pr-3">Pedida</th>
-                    <th className="py-2 pr-3">Recebida</th>
-                    <th className="py-2 pr-3">Restante</th>
-                    <th className="py-2">Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-sm text-left">
+                <TableHeader>
+                  <TableRow className="border-b text-xs text-muted-foreground">
+                    <TableHead className="py-2 pr-3">Pedido</TableHead>
+                    <TableHead className="py-2 pr-3">Item</TableHead>
+                    <TableHead className="py-2 pr-3">Previsto</TableHead>
+                    <TableHead className="py-2 pr-3">Pedida</TableHead>
+                    <TableHead className="py-2 pr-3">Recebida</TableHead>
+                    <TableHead className="py-2 pr-3">Restante</TableHead>
+                    <TableHead className="py-2">Situação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {lista.map((x) => (
-                    <tr key={x.pedido_id + x.linha_id} className="border-b align-top">
-                      <td className="py-2 pr-3 font-mono">{x.numero ?? x.pedido_id}</td>
-                      <td className="py-2 pr-3 font-mono">{x.produto_id}</td>
-                      <td className="py-2 pr-3">{data(x.data_prevista)}</td>
-                      <td className="py-2 pr-3">
+                    <TableRow key={x.pedido_id + x.linha_id} className="border-b align-top">
+                      <TableCell className="py-2 pr-3 font-mono">
+                        {x.numero ?? x.pedido_id}
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 font-mono">{x.produto_id}</TableCell>
+                      <TableCell className="py-2 pr-3">{data(x.data_prevista)}</TableCell>
+                      <TableCell className="py-2 pr-3">
                         {x.quantidade_pedida} {x.unidade ?? ''}
-                      </td>
-                      <td className="py-2 pr-3">{x.quantidade_recebida}</td>
-                      <td className="py-2 pr-3">{x.restante}</td>
-                      <td className="py-2 space-x-1">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3">{x.quantidade_recebida}</TableCell>
+                      <TableCell className="py-2 pr-3">{x.restante}</TableCell>
+                      <TableCell className="py-2 space-x-1">
                         {x.cancelado && <Badge variant="outline">cancelado</Badge>}
                         {x.atrasado && (
-                          <Badge className="bg-red-100 text-red-900 border-red-300">
+                          <Badge className="bg-destructive/10 text-destructive border-destructive/30">
                             {x.dias_atraso} dia{x.dias_atraso === 1 ? '' : 's'} de atraso
                           </Badge>
                         )}
@@ -113,11 +124,11 @@ const Entregas = () => {
                         {!x.cancelado && x.restante === 0 && (
                           <Badge variant="outline">recebido</Badge>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </section>
         )

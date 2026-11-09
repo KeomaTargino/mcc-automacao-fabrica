@@ -12,11 +12,20 @@ import {
 } from '@/lib/pcp/qualidade'
 import { ROTULO_ORIGEM } from '@/lib/pcp/faltantes'
 import { obterFaltantes, type RespostaFaltantes } from '@/services/pcp-faltantes'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const COR_BLOQUEIO: Record<string, string> = {
-  calculo_estoque: 'bg-amber-100 text-amber-900 border-amber-300',
-  calculo_receita: 'bg-orange-100 text-orange-900 border-orange-300',
-  calculo_sugestao: 'bg-red-100 text-red-900 border-red-300',
+  calculo_estoque: 'bg-warning/10 text-warning border-warning/30',
+  calculo_receita: 'bg-warning/10 text-warning border-warning/30',
+  calculo_sugestao: 'bg-destructive/10 text-destructive border-destructive/30',
 }
 
 const ROTULO_BLOQUEIO_CURTO: Record<string, string> = {
@@ -57,16 +66,16 @@ const FaltantesOmie = () => {
       <CardContent className="space-y-3 text-sm">
         {erro && (
           <div
-            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-900"
+            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive"
             role="alert"
           >
             {erro}
           </div>
         )}
-        {!erro && !dados && <p className="text-muted-foreground">Carregando a lista…</p>}
+        {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
         {dados && dados.situacao === 'catalogo_incompleto' && (
           <div
-            className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900"
+            className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning"
             role="status"
           >
             {MOTIVO_INCOMPLETO[dados.motivo ?? ''] ?? 'A lista ainda não pode ser montada.'}
@@ -82,28 +91,28 @@ const FaltantesOmie = () => {
               Cadastre no Omie; na próxima leitura o produto sai desta lista.
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="py-2 pr-3">Código</th>
-                    <th className="py-2 pr-3">Descrição</th>
-                    <th className="py-2">Onde aparece</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-left">
+                <TableHeader>
+                  <TableRow className="border-b text-xs text-muted-foreground">
+                    <TableHead className="py-2 pr-3">Código</TableHead>
+                    <TableHead className="py-2 pr-3">Descrição</TableHead>
+                    <TableHead className="py-2">Onde aparece</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {dados.itens.map((i) => (
-                    <tr key={i.codigo} className="border-b align-top">
-                      <td className="py-2 pr-3 font-mono">{i.codigo}</td>
-                      <td className="py-2 pr-3">{i.descricao ?? '—'}</td>
-                      <td className="py-2">
+                    <TableRow key={i.codigo} className="border-b align-top">
+                      <TableCell className="py-2 pr-3 font-mono">{i.codigo}</TableCell>
+                      <TableCell className="py-2 pr-3">{i.descricao ?? '—'}</TableCell>
+                      <TableCell className="py-2">
                         {i.onde
                           .map((o) => `${ROTULO_ORIGEM[o.origem]} (${o.referencia})`)
                           .join('; ')}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </>
         )}
@@ -139,7 +148,7 @@ const Qualidade = () => {
       <FaltantesOmie />
 
       <div
-        className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+        className="mb-6 rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info"
         role="status"
       >
         <strong>Dados de demonstração.</strong> Os produtos abaixo são exemplos e não existem no
@@ -155,11 +164,11 @@ const Qualidade = () => {
                   {p.descricao} <span className="font-mono text-xs">({p.codigo})</span>
                 </span>
                 {p.bloqueios.length === 0 ? (
-                  <Badge className="bg-green-100 text-green-900 border-green-300">
+                  <Badge className="bg-success/10 text-success border-success/30">
                     Pronto para calcular
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="border-amber-300 text-amber-900">
+                  <Badge variant="outline" className="border-warning/30 text-warning">
                     {p.bloqueios.length} bloqueio(s)
                   </Badge>
                 )}
@@ -172,7 +181,7 @@ const Qualidade = () => {
                   {p.unidade_oficial ? (
                     <strong>{p.unidade_oficial}</strong>
                   ) : (
-                    <span className="text-amber-700 font-medium">desconhecida</span>
+                    <span className="text-warning font-medium">desconhecida</span>
                   )}
                 </div>
                 <div>
@@ -187,7 +196,7 @@ const Qualidade = () => {
                       </span>
                     </span>
                   ) : (
-                    <span className="text-amber-700 font-medium">sem informação</span>
+                    <span className="text-warning font-medium">sem informação</span>
                   )}
                 </div>
                 <div>

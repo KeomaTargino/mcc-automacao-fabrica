@@ -29,6 +29,15 @@ import {
   registrarApontamentoServidor,
   type EstadoProducao,
 } from '@/services/pcp-producao'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import Escolha from '@/components/Escolha'
 
 // Apontamentos: a cozinha e o encaixotamento gravam no servidor (SPEC-4-001). O identificador do evento
 // nasce aqui e é reaproveitado no reenvio da mesma tentativa, para o servidor reconhecer a repetição.
@@ -195,7 +204,7 @@ const Apontamentos = () => {
 
       {erroCarga && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           Não foi possível carregar.{' '}
@@ -207,7 +216,7 @@ const Apontamentos = () => {
 
       {!erroCarga && estado && ordens.length === 0 && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Ainda não há programação publicada. O PCP publica em Planejamento.
@@ -224,31 +233,22 @@ const Apontamentos = () => {
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
                   <span className="text-muted-foreground">Ordem</span>
-                  <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  <Escolha
                     value={opAtual}
-                    onChange={(e) => setOpId(e.target.value)}
-                  >
-                    {ordens.map((o) => (
-                      <option key={o.op_id} value={o.op_id}>
-                        {o.op_id} · {o.produto} · {o.data}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setOpId}
+                    opcoes={ordens.map((o) => ({
+                      valor: o.op_id,
+                      rotulo: `${o.op_id} · ${o.produto} · ${o.data}`,
+                    }))}
+                  />
                 </label>
                 <label className="space-y-1">
                   <span className="text-muted-foreground">Ponto</span>
-                  <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  <Escolha
                     value={pontoAtual}
-                    onChange={(e) => setPonto(e.target.value)}
-                  >
-                    {pontos.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setPonto}
+                    opcoes={pontos.map((p) => ({ valor: p, rotulo: p }))}
+                  />
                 </label>
               </div>
               <div className="flex flex-wrap gap-1">
@@ -337,7 +337,7 @@ const Apontamentos = () => {
                     {c.adicionais.toFixed(2)} − devoluções {c.devolucoes.toFixed(2)}
                   </p>
                   {c.perda_declarada > 0 && (
-                    <p className="text-xs text-orange-700">
+                    <p className="text-xs text-warning">
                       Perda declarada (separada, não somada ao líquido):{' '}
                       {c.perda_declarada.toFixed(2)}
                     </p>
@@ -367,24 +367,24 @@ const Apontamentos = () => {
               <p className="text-muted-foreground">Nenhum evento registrado.</p>
             )}
             {eventos.length > 0 && (
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="pb-2">Tipo</th>
-                    <th className="pb-2">Item</th>
-                    <th className="pb-2">Qtd</th>
-                    <th className="pb-2">Ponto</th>
-                    <th className="pb-2">Autor</th>
-                    <th className="pb-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="text-left text-muted-foreground">
+                    <TableHead className="pb-2">Tipo</TableHead>
+                    <TableHead className="pb-2">Item</TableHead>
+                    <TableHead className="pb-2">Qtd</TableHead>
+                    <TableHead className="pb-2">Ponto</TableHead>
+                    <TableHead className="pb-2">Autor</TableHead>
+                    <TableHead className="pb-2"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {eventos.map((e) => (
-                    <tr
+                    <TableRow
                       key={e.evento_id}
                       className={retificados.has(e.evento_id) ? 'opacity-60' : ''}
                     >
-                      <td>
+                      <TableCell>
                         {e.tipo}
                         {e.retifica && (
                           <span className="ml-1 text-xs text-muted-foreground">(retificação)</span>
@@ -392,14 +392,14 @@ const Apontamentos = () => {
                         {retificados.has(e.evento_id) && (
                           <span className="ml-1 text-xs text-muted-foreground">(retificado)</span>
                         )}
-                      </td>
-                      <td>{e.item}</td>
-                      <td>
+                      </TableCell>
+                      <TableCell>{e.item}</TableCell>
+                      <TableCell>
                         {e.quantidade} {e.unidade}
-                      </td>
-                      <td>{e.ponto}</td>
-                      <td className="text-xs">{e.autor}</td>
-                      <td>
+                      </TableCell>
+                      <TableCell>{e.ponto}</TableCell>
+                      <TableCell className="text-xs">{e.autor}</TableCell>
+                      <TableCell>
                         {!retificados.has(e.evento_id) && pontos.includes(e.ponto) && (
                           <Button
                             variant="outline"
@@ -410,11 +410,11 @@ const Apontamentos = () => {
                             Retificar
                           </Button>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>

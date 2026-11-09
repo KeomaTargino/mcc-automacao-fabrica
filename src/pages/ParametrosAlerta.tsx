@@ -13,6 +13,7 @@ import {
   type ParametroAlerta,
   type RespostaParametrosAlerta,
 } from '@/services/pcp-alertas'
+import Escolha from '@/components/Escolha'
 
 const TIPOS_GRAV = [
   ['producao', 'Produção atrasada'],
@@ -106,7 +107,7 @@ const ParametrosAlerta = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -127,18 +128,19 @@ const ParametrosAlerta = () => {
               {TIPOS_GRAV.map(([t, r]) => (
                 <label key={t} className="flex items-center gap-2">
                   {r}
-                  <select
-                    className={campo}
-                    value={grav[t] ?? ''}
+                  <Escolha
+                    className="w-40"
+                    value={grav[t] ?? 'nenhuma'}
                     disabled={!dados.pode_editar}
-                    onChange={(e) =>
-                      setGrav((g) => ({ ...g, [t]: (e.target.value || undefined) as any }))
+                    onChange={(v) =>
+                      setGrav((g) => ({ ...g, [t]: (v === 'nenhuma' ? undefined : v) as any }))
                     }
-                  >
-                    <option value="">não definida</option>
-                    <option value="atencao">atenção</option>
-                    <option value="critico">crítico</option>
-                  </select>
+                    opcoes={[
+                      { valor: 'nenhuma', rotulo: 'não definida' },
+                      { valor: 'atencao', rotulo: 'atenção' },
+                      { valor: 'critico', rotulo: 'crítico' },
+                    ]}
+                  />
                 </label>
               ))}
               <span className="text-xs text-muted-foreground">
@@ -174,14 +176,15 @@ const ParametrosAlerta = () => {
           </div>
           {dados.pode_editar && (
             <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
-              <select
-                className={campo}
+              <Escolha
+                className="w-40"
                 value={novoEscopo}
-                onChange={(e) => setNovoEscopo(e.target.value as any)}
-              >
-                <option value="produto">Produto</option>
-                <option value="familia">Família</option>
-              </select>
+                onChange={(v) => setNovoEscopo(v as any)}
+                opcoes={[
+                  { valor: 'produto', rotulo: 'Produto' },
+                  { valor: 'familia', rotulo: 'Família' },
+                ]}
+              />
               <input
                 className={campo}
                 placeholder="código ou nome"

@@ -54,7 +54,7 @@ const Consolidacoes = () => {
 
       {erroCarga && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           Não foi possível carregar.{' '}
@@ -66,7 +66,7 @@ const Consolidacoes = () => {
 
       {!erroCarga && estado && linhas.length === 0 && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Ainda não há programação publicada.
@@ -85,9 +85,9 @@ const Consolidacoes = () => {
                   variant="outline"
                   className={
                     l.ordem?.estado === 'confirmada'
-                      ? 'border-green-300 text-green-900'
+                      ? 'border-success/30 text-success'
                       : l.ordem
-                        ? 'border-amber-300 text-amber-900'
+                        ? 'border-warning/30 text-warning'
                         : 'border-slate-300 text-slate-700'
                   }
                 >

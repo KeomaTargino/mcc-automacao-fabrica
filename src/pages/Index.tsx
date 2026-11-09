@@ -13,6 +13,7 @@ import {
   saudacaoCompleta,
   temPainel,
 } from '@/lib/pcp/menu'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Tela inicial (SPEC-4-003): saudação, data, alertas abertos (só para quem tem painel) e os atalhos
 // das áreas da pessoa. Nenhum número novo é calculado.
@@ -72,7 +73,7 @@ const Index = () => {
             {erro ? (
               <p role="alert">Não foi possível carregar os alertas.</p>
             ) : alertas === null ? (
-              <p className="text-muted-foreground">Carregando…</p>
+              <Skeleton className="h-24 w-full" aria-label="Carregando" />
             ) : (
               <p>
                 <strong>{alertas}</strong> {alertas === 1 ? 'alerta aberto' : 'alertas abertos'}.

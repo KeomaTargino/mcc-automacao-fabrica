@@ -12,6 +12,14 @@ import { obterPiloto, type RespostaPiloto } from '@/services/pcp-piloto'
 import { conciliarProduto } from '@/lib/pcp/conciliacao'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro, semInformacao, textoSeguro } from '@/lib/pcp/textos'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const Catalogo = () => {
   const [piloto, setPiloto] = useState<RespostaPiloto | null>(null)
@@ -119,7 +127,7 @@ const Catalogo = () => {
               </div>
             </div>
             {pilotoConciliado.bloqueios.length > 0 && (
-              <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
+              <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                 <p className="font-medium">O que está faltando (nada é preenchido sozinho):</p>
                 <ul className="mt-1 list-disc list-inside">
                   {pilotoConciliado.bloqueios.map((b) => (
@@ -133,30 +141,30 @@ const Catalogo = () => {
                 <p className="font-medium mb-1 text-sm">
                   Ficha técnica (como está no Omie, sem conversão):
                 </p>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="pb-1">Insumo</th>
-                      <th className="pb-1">Descrição</th>
-                      <th className="pb-1">Quantidade</th>
-                      <th className="pb-1">Unidade</th>
-                      <th className="pb-1">Perda %</th>
-                      <th className="pb-1">Tipo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader>
+                    <TableRow className="text-left text-muted-foreground">
+                      <TableHead className="pb-1">Insumo</TableHead>
+                      <TableHead className="pb-1">Descrição</TableHead>
+                      <TableHead className="pb-1">Quantidade</TableHead>
+                      <TableHead className="pb-1">Unidade</TableHead>
+                      <TableHead className="pb-1">Perda %</TableHead>
+                      <TableHead className="pb-1">Tipo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {pilotoConciliado.ficha.itens.map((i) => (
-                      <tr key={i.insumo}>
-                        <td className="py-1 font-mono text-xs">{i.insumo}</td>
-                        <td>{i.descricao}</td>
-                        <td>{i.quantidade}</td>
-                        <td>{i.unidade}</td>
-                        <td>{i.perda_pct}</td>
-                        <td className="font-mono text-xs">{i.tipo}</td>
-                      </tr>
+                      <TableRow key={i.insumo}>
+                        <TableCell className="py-1 font-mono text-xs">{i.insumo}</TableCell>
+                        <TableCell>{i.descricao}</TableCell>
+                        <TableCell>{i.quantidade}</TableCell>
+                        <TableCell>{i.unidade}</TableCell>
+                        <TableCell>{i.perda_pct}</TableCell>
+                        <TableCell className="font-mono text-xs">{i.tipo}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
             {piloto.locais && piloto.locais.length > 0 && (
@@ -168,7 +176,7 @@ const Catalogo = () => {
               </p>
             )}
             {piloto.unidades_estoque && piloto.unidades_estoque.length > 0 && (
-              <p className="mt-2 text-sm text-amber-800">
+              <p className="mt-2 text-sm text-warning">
                 Unidades registradas nas linhas de estoque do lote ativo:{' '}
                 {piloto.unidades_estoque.join(', ')}
                 {pilotoConciliado.unidades_estoque_incompativeis.length > 0 &&
@@ -180,7 +188,7 @@ const Catalogo = () => {
       )}
       {piloto && !piloto.disponivel && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Produto de conferência indisponível — nada foi inventado. Motivo:{' '}
@@ -220,7 +228,7 @@ const Catalogo = () => {
 
       {erro && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -229,7 +237,7 @@ const Catalogo = () => {
 
       {dados && !dados.disponivel && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           <p className="font-semibold">
@@ -241,7 +249,7 @@ const Catalogo = () => {
               : 'Ainda não há produtos carregados.'}
           </p>
           {(dados.pendencias || []).map((p, i) => (
-            <p key={i} className="mt-1 text-amber-800">
+            <p key={i} className="mt-1 text-warning">
               {textoSeguro(p, 'Há uma pendência neste cadastro.')}
             </p>
           ))}
@@ -258,30 +266,30 @@ const Catalogo = () => {
           </CardHeader>
           <CardContent>
             {dados.produtos && dados.produtos.length > 0 ? (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="pb-2">ID (Omie)</th>
-                    <th className="pb-2">Código</th>
-                    <th className="pb-2">Descrição</th>
-                    <th className="pb-2">Unidade</th>
-                    <th className="pb-2">Ativo</th>
-                    <th className="pb-2">Família</th>
-                    <th className="pb-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="text-left text-muted-foreground">
+                    <TableHead className="pb-2">ID (Omie)</TableHead>
+                    <TableHead className="pb-2">Código</TableHead>
+                    <TableHead className="pb-2">Descrição</TableHead>
+                    <TableHead className="pb-2">Unidade</TableHead>
+                    <TableHead className="pb-2">Ativo</TableHead>
+                    <TableHead className="pb-2">Família</TableHead>
+                    <TableHead className="pb-2"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {dados.produtos.map((p) => (
-                    <tr key={p.produto_id}>
-                      <td className="py-1 font-mono text-xs">{p.produto_id}</td>
-                      <td className="py-1">{p.codigo}</td>
-                      <td>{p.descricao}</td>
-                      <td>
-                        {p.unidade || <span className="text-amber-700">{semInformacao()}</span>}
-                      </td>
-                      <td>{p.ativo === 'S' ? 'Sim' : 'Não'}</td>
-                      <td>{p.familia}</td>
-                      <td>
+                    <TableRow key={p.produto_id}>
+                      <TableCell className="py-1 font-mono text-xs">{p.produto_id}</TableCell>
+                      <TableCell className="py-1">{p.codigo}</TableCell>
+                      <TableCell>{p.descricao}</TableCell>
+                      <TableCell>
+                        {p.unidade || <span className="text-warning">{semInformacao()}</span>}
+                      </TableCell>
+                      <TableCell>{p.ativo === 'S' ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell>{p.familia}</TableCell>
+                      <TableCell>
                         <Button
                           variant="outline"
                           size="sm"
@@ -289,11 +297,11 @@ const Catalogo = () => {
                         >
                           Detalhe
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {buscaAplicada
@@ -361,12 +369,12 @@ const Catalogo = () => {
                     {detalhe.produto.familia || '—'}
                   </div>
                 </div>
-                <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+                <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                   Ficha técnica: <strong>ainda não disponível</strong> — o Omie não entrega a ficha
                   por esta conexão. Nada é inventado.
                 </div>
                 {detalhe.pendencias && detalhe.pendencias.length > 0 && (
-                  <div className="rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-orange-900">
+                  <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                     <p className="font-medium">
                       Pendências deste item (nada é preenchido sozinho):
                     </p>
@@ -381,35 +389,35 @@ const Catalogo = () => {
                   (detalhe.saldo.disponivel ? (
                     <div>
                       <p className="font-medium mb-1">Saldo por local:</p>
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-muted-foreground">
-                            <th className="pb-1">Local</th>
-                            <th className="pb-1">Unidade</th>
-                            <th className="pb-1">Saldo</th>
-                            <th className="pb-1">Físico</th>
-                            <th className="pb-1">Reservado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      <Table className="w-full text-sm">
+                        <TableHeader>
+                          <TableRow className="text-left text-muted-foreground">
+                            <TableHead className="pb-1">Local</TableHead>
+                            <TableHead className="pb-1">Unidade</TableHead>
+                            <TableHead className="pb-1">Saldo</TableHead>
+                            <TableHead className="pb-1">Físico</TableHead>
+                            <TableHead className="pb-1">Reservado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {(detalhe.saldo.por_local || []).map((l) => (
-                            <tr key={l.local_id}>
-                              <td className="py-1 font-mono text-xs">{l.local_id}</td>
-                              <td>
+                            <TableRow key={l.local_id}>
+                              <TableCell className="py-1 font-mono text-xs">{l.local_id}</TableCell>
+                              <TableCell>
                                 {l.unidade}
                                 {l.unidade_incompativel && (
-                                  <span className="ml-1 text-orange-700">
+                                  <span className="ml-1 text-warning">
                                     (incompatível com o cadastro — sem conversão)
                                   </span>
                                 )}
-                              </td>
-                              <td>{l.saldo}</td>
-                              <td>{l.fisico}</td>
-                              <td>{l.reservado}</td>
-                            </tr>
+                              </TableCell>
+                              <TableCell>{l.saldo}</TableCell>
+                              <TableCell>{l.fisico}</TableCell>
+                              <TableCell>{l.reservado}</TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
                     <div className="rounded-md border px-3 py-2 text-sm bg-muted">

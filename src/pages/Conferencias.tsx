@@ -23,6 +23,15 @@ import {
   lerEstadoProducao,
   registrarConferenciaServidor,
 } from '@/services/pcp-producao'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import Escolha from '@/components/Escolha'
 
 // Conferências: a expedição e a câmara conferem e o PCP aprova no servidor (SPEC-4-001). Os identificadores
 // nascem aqui e são reaproveitados no reenvio da mesma tentativa. A tela relê o estado a cada 30 segundos
@@ -163,7 +172,7 @@ const Conferencias = () => {
 
       {erroCarga && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           Não foi possível carregar.{' '}
@@ -175,7 +184,7 @@ const Conferencias = () => {
 
       {!erroCarga && estado && ordens.length === 0 && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Ainda não há programação publicada. O PCP publica em Planejamento.
@@ -186,17 +195,14 @@ const Conferencias = () => {
         <>
           <label className="mb-4 block max-w-md space-y-1 text-sm">
             <span className="text-muted-foreground">Ordem</span>
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            <Escolha
               value={opAtual}
-              onChange={(e) => setOpId(e.target.value)}
-            >
-              {ordens.map((o) => (
-                <option key={o.op_id} value={o.op_id}>
-                  {o.op_id} · {o.produto} · {o.data}
-                </option>
-              ))}
-            </select>
+              onChange={setOpId}
+              opcoes={ordens.map((o) => ({
+                valor: o.op_id,
+                rotulo: `${o.op_id} · ${o.produto} · ${o.data}`,
+              }))}
+            />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -212,7 +218,7 @@ const Conferencias = () => {
                     disabled={!podeExp || enviando}
                     className={
                       fila?.quantidades.recebido_expedicao != null
-                        ? 'bg-green-600 text-white hover:bg-green-700 border-green-700'
+                        ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
                         : undefined
                     }
                   >
@@ -228,7 +234,7 @@ const Conferencias = () => {
                     disabled={!podeCam || enviando}
                     className={
                       fila?.quantidades.entrada_camara != null
-                        ? 'bg-green-600 text-white hover:bg-green-700 border-green-700'
+                        ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
                         : undefined
                     }
                   >
@@ -239,7 +245,7 @@ const Conferencias = () => {
                   </Button>
                 </div>
                 {!podeExp && !podeCam && (
-                  <p className="text-xs text-amber-700" role="note">
+                  <p className="text-xs text-warning" role="note">
                     Modo visualização: sua conta não confere nesta tela.
                   </p>
                 )}
@@ -280,49 +286,49 @@ const Conferencias = () => {
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 {fila && (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-muted-foreground">
-                        <th className="pb-2">Etapa</th>
-                        <th className="pb-2">Qtd (UN)</th>
-                        <th className="pb-2">Delta</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Produzido (cozinha)</td>
-                        <td>{fila.quantidades.produzido}</td>
-                        <td>—</td>
-                      </tr>
-                      <tr>
-                        <td>Encaixotado</td>
-                        <td>{fila.quantidades.encaixotado}</td>
-                        <td>{fila.deltas.encaixotado}</td>
-                      </tr>
-                      <tr>
-                        <td>Recebido (expedição)</td>
-                        <td>
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="text-left text-muted-foreground">
+                        <TableHead className="pb-2">Etapa</TableHead>
+                        <TableHead className="pb-2">Qtd (UN)</TableHead>
+                        <TableHead className="pb-2">Delta</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Produzido (cozinha)</TableCell>
+                        <TableCell>{fila.quantidades.produzido}</TableCell>
+                        <TableCell>—</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Encaixotado</TableCell>
+                        <TableCell>{fila.quantidades.encaixotado}</TableCell>
+                        <TableCell>{fila.deltas.encaixotado}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Recebido (expedição)</TableCell>
+                        <TableCell>
                           {fila.quantidades.recebido_expedicao ?? (
-                            <span className="text-amber-700">ausente</span>
+                            <span className="text-warning">ausente</span>
                           )}
-                        </td>
-                        <td>{fila.deltas.recebido ?? '—'}</td>
-                      </tr>
-                      <tr>
-                        <td>Entrada em câmara</td>
-                        <td>
+                        </TableCell>
+                        <TableCell>{fila.deltas.recebido ?? '—'}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Entrada em câmara</TableCell>
+                        <TableCell>
                           {fila.quantidades.entrada_camara ?? (
-                            <span className="text-amber-700">ausente</span>
+                            <span className="text-warning">ausente</span>
                           )}
-                        </td>
-                        <td>{fila.deltas.camara ?? '—'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                        </TableCell>
+                        <TableCell>{fila.deltas.camara ?? '—'}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 )}
                 {fila && fila.pendencias.length > 0 && (
                   <div
-                    className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                    className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
                     role="alert"
                   >
                     <p className="font-medium">Pendências (nada é preenchido por padrão):</p>
@@ -343,7 +349,7 @@ const Conferencias = () => {
                 <CardTitle className="text-base flex items-center justify-between gap-2">
                   <span>Revisão do PCP</span>
                   {ativa ? (
-                    <Badge variant="outline" className="border-green-300 text-green-900">
+                    <Badge variant="outline" className="border-success/30 text-success">
                       Aprovação ativa: {ativa.quantidade_final} UN
                     </Badge>
                   ) : (
@@ -414,26 +420,28 @@ const Conferencias = () => {
                 <p className="text-muted-foreground">Nenhuma conferência ainda.</p>
               )}
               {registros.length > 0 && (
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="pb-2">Etapa</th>
-                      <th className="pb-2">Qtd</th>
-                      <th className="pb-2">Autor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="text-left text-muted-foreground">
+                      <TableHead className="pb-2">Etapa</TableHead>
+                      <TableHead className="pb-2">Qtd</TableHead>
+                      <TableHead className="pb-2">Autor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {registros.map((r) => (
-                      <tr key={r.registro_id}>
-                        <td>{r.etapa === 'recebimento_expedicao' ? 'expedição' : 'câmara'}</td>
-                        <td>
+                      <TableRow key={r.registro_id}>
+                        <TableCell>
+                          {r.etapa === 'recebimento_expedicao' ? 'expedição' : 'câmara'}
+                        </TableCell>
+                        <TableCell>
                           {r.quantidade} {r.unidade}
-                        </td>
-                        <td className="text-xs">{r.autor}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="text-xs">{r.autor}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>

@@ -13,6 +13,7 @@ import {
   type ItemFilaOp,
   type RespostaFilaOp,
 } from '@/services/pcp-omie-op'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const ROTULO_ESTADO: Record<string, string> = {
   preparada: 'Aguarda autorização do dono',
@@ -85,19 +86,19 @@ const EnvioOmie = () => {
 
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
 
       {dados && (
         <div className="mb-4 flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Envio ao Omie:</span>
           {dados.chave.ligada ? (
-            <Badge className="bg-amber-100 text-amber-900 border-amber-300">
+            <Badge className="bg-warning/10 text-warning border-warning/30">
               ligado para uma ordem autorizada
             </Badge>
           ) : (
@@ -212,7 +213,7 @@ const EnvioOmie = () => {
                 <div
                   className={`rounded-md border px-3 py-2 text-xs ${
                     i.conferencia.resultado === 'divergente'
-                      ? 'border-amber-300 bg-amber-50 text-amber-900'
+                      ? 'border-warning/30 bg-warning/10 text-warning'
                       : 'bg-muted'
                   }`}
                   role="status"

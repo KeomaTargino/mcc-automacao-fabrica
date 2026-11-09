@@ -16,7 +16,7 @@ const NotFound = () => {
         <p className="text-xl text-gray-600 mb-4" data-subtitulo>
           Esta página não existe ou foi movida.
         </p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
+        <a href="/" className="text-info hover:text-info underline">
           Voltar ao início
         </a>
       </div>

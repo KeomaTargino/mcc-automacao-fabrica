@@ -110,7 +110,7 @@ const PedidosManuais = () => {
             </p>
           )}
           {erro && (
-            <p className="text-sm text-red-800" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {erro}
             </p>
           )}

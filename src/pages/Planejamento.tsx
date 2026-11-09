@@ -18,6 +18,15 @@ import {
   publicarProgramacaoServidor,
   type EstadoProducao,
 } from '@/services/pcp-producao'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import Escolha from '@/components/Escolha'
 
 // Planejamento: a programação fica no servidor (SPEC-4-001). Os parâmetros e o calendário vêm da versão
 // aprovada em /parametros; sem eles, "Publicar" fica desabilitado. A tela relê o estado a cada 30 segundos
@@ -133,7 +142,7 @@ const Planejamento = () => {
 
       {erroCarga && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           Não foi possível carregar.{' '}
@@ -145,7 +154,7 @@ const Planejamento = () => {
 
       {!situacao.pode && !erroCarga && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           {textoSeguro(situacao.motivo, 'Aprove os parâmetros antes de publicar.')}.
@@ -202,33 +211,19 @@ const Planejamento = () => {
                 </label>
                 <label className="space-y-1">
                   <span className="text-muted-foreground">Data</span>
-                  <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  <Escolha
                     value={data}
-                    onChange={(e) => setData(e.target.value)}
-                  >
-                    <option value="">Escolha</option>
-                    {diasComRecurso.map((d) => (
-                      <option key={d.data} value={d.data}>
-                        {d.data}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setData}
+                    opcoes={diasComRecurso.map((d) => ({ valor: d.data, rotulo: d.data }))}
+                  />
                 </label>
                 <label className="space-y-1">
                   <span className="text-muted-foreground">Recurso</span>
-                  <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  <Escolha
                     value={recurso}
-                    onChange={(e) => setRecurso(e.target.value)}
-                  >
-                    <option value="">Escolha</option>
-                    {nomesRecursos.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setRecurso}
+                    opcoes={nomesRecursos.map((r) => ({ valor: r, rotulo: r }))}
+                  />
                 </label>
               </div>
               <Button size="sm" onClick={adicionarLinha}>
@@ -251,11 +246,11 @@ const Planejamento = () => {
             <CardTitle className="text-base flex items-center justify-between gap-2">
               <span>Rascunho — {linhas.length} linha(s)</span>
               {validacao?.pode_publicar && linhas.length > 0 ? (
-                <Badge className="bg-green-100 text-green-900 border-green-300">
+                <Badge className="bg-success/10 text-success border-success/30">
                   Pronto para publicar
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-amber-300 text-amber-900">
+                <Badge variant="outline" className="border-warning/30 text-warning">
                   {linhas.length === 0
                     ? 'Sem linhas'
                     : `${validacao?.linhas_recusadas ?? 0} recusada(s)`}
@@ -265,24 +260,24 @@ const Planejamento = () => {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {linhas.length > 0 && (
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="pb-2">Produto</th>
-                    <th className="pb-2">Qtd</th>
-                    <th className="pb-2">Data</th>
-                    <th className="pb-2">Recurso</th>
-                    <th className="pb-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="text-left text-muted-foreground">
+                    <TableHead className="pb-2">Produto</TableHead>
+                    <TableHead className="pb-2">Qtd</TableHead>
+                    <TableHead className="pb-2">Data</TableHead>
+                    <TableHead className="pb-2">Recurso</TableHead>
+                    <TableHead className="pb-2"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {linhas.map((l, i) => (
-                    <tr key={i}>
-                      <td className="py-1">{l.produto}</td>
-                      <td>{l.quantidade}</td>
-                      <td className="font-mono text-xs">{l.data}</td>
-                      <td>{l.recurso}</td>
-                      <td>
+                    <TableRow key={i}>
+                      <TableCell className="py-1">{l.produto}</TableCell>
+                      <TableCell>{l.quantidade}</TableCell>
+                      <TableCell className="font-mono text-xs">{l.data}</TableCell>
+                      <TableCell>{l.recurso}</TableCell>
+                      <TableCell>
                         <Button
                           variant="outline"
                           size="sm"
@@ -290,11 +285,11 @@ const Planejamento = () => {
                         >
                           Remover
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
             <Button
               onClick={publicar}
@@ -319,28 +314,28 @@ const Planejamento = () => {
               {publicada.publicada_em?.slice(0, 16).replace('T', ' ')}. A tela relê o servidor a
               cada 30 segundos.
             </p>
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="pb-2">Ordem</th>
-                  <th className="pb-2">Produto</th>
-                  <th className="pb-2">Qtd</th>
-                  <th className="pb-2">Data</th>
-                  <th className="pb-2">Recurso</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="text-left text-muted-foreground">
+                  <TableHead className="pb-2">Ordem</TableHead>
+                  <TableHead className="pb-2">Produto</TableHead>
+                  <TableHead className="pb-2">Qtd</TableHead>
+                  <TableHead className="pb-2">Data</TableHead>
+                  <TableHead className="pb-2">Recurso</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {publicada.ops.map((o) => (
-                  <tr key={o.op_id}>
-                    <td className="py-1 font-mono text-xs">{o.op_id}</td>
-                    <td>{o.produto}</td>
-                    <td>{o.quantidade}</td>
-                    <td className="font-mono text-xs">{o.data}</td>
-                    <td>{o.recurso}</td>
-                  </tr>
+                  <TableRow key={o.op_id}>
+                    <TableCell className="py-1 font-mono text-xs">{o.op_id}</TableCell>
+                    <TableCell>{o.produto}</TableCell>
+                    <TableCell>{o.quantidade}</TableCell>
+                    <TableCell className="font-mono text-xs">{o.data}</TableCell>
+                    <TableCell>{o.recurso}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

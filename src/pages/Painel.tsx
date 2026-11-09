@@ -11,6 +11,15 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro, semInformacao, textoSeguro } from '@/lib/pcp/textos'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const fmtData = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('pt-BR') : '—'
@@ -37,7 +46,7 @@ function MetaFonte({
 function Pendencias({ lista }: { lista?: string[] }) {
   if (!lista || lista.length === 0) return null
   return (
-    <ul className="mt-2 list-disc list-inside text-sm text-orange-800">
+    <ul className="mt-2 list-disc list-inside text-sm text-warning">
       {lista.map((p, i) => (
         <li key={i}>{textoSeguro(p, 'Há uma pendência neste bloco.')}</li>
       ))}
@@ -70,7 +79,7 @@ function BlocoIndisponivel({
         <CardTitle className="text-base">{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-3 py-2">
+        <p className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-md px-3 py-2">
           Bloco indisponível —{' '}
           {bloco.motivo === 'fonte_nao_integrada_na_fase_1'
             ? 'esta fonte ainda não está ligada ao sistema.'
@@ -190,22 +199,18 @@ const Painel = () => {
 
       {erro && (
         <div
-          className="mb-6 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
 
-      {carregando && (
-        <p className="text-sm text-muted-foreground" role="status">
-          Carregando…
-        </p>
-      )}
+      {carregando && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
 
       {!carregando && resposta && !resposta.disponivel && (
         <div
-          className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Painel indisponível — {textoSeguro(resposta.motivo, 'sem dados autorizados')}
@@ -244,32 +249,32 @@ const Painel = () => {
                         .join(' · ')}
                     </p>
                   )}
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="pb-2">Código</th>
-                      <th className="pb-2">Descrição</th>
-                      <th className="pb-2">Local</th>
-                      <th className="pb-2 text-right">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader>
+                    <TableRow className="text-left text-muted-foreground">
+                      <TableHead className="pb-2">Código</TableHead>
+                      <TableHead className="pb-2">Descrição</TableHead>
+                      <TableHead className="pb-2">Local</TableHead>
+                      <TableHead className="pb-2 text-right">Saldo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {(estoque.itens || []).map((l) => (
-                      <tr key={`${l.produto_id}-${l.local_id}-${l.unidade}`}>
-                        <td className="py-1 font-mono text-xs">{l.codigo}</td>
-                        <td>{l.descricao}</td>
-                        <td className="font-mono text-xs">{l.local_id}</td>
-                        <td className="text-right">
+                      <TableRow key={`${l.produto_id}-${l.local_id}-${l.unidade}`}>
+                        <TableCell className="py-1 font-mono text-xs">{l.codigo}</TableCell>
+                        <TableCell>{l.descricao}</TableCell>
+                        <TableCell className="font-mono text-xs">{l.local_id}</TableCell>
+                        <TableCell className="text-right">
                           {l.saldo === null || l.saldo === undefined ? (
-                            <span className="text-orange-700">{semInformacao('saldo')}</span>
+                            <span className="text-warning">{semInformacao('saldo')}</span>
                           ) : (
                             `${l.saldo} ${l.unidade}`
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
                 <Pendencias lista={estoque.pendencias} />
                 {estoque.nota && (
                   <p className="text-xs text-muted-foreground mt-2">

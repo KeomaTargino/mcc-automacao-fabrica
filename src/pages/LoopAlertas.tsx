@@ -94,7 +94,7 @@ const LoopAlertas = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -124,7 +124,7 @@ const LoopAlertas = () => {
                 {d.config.alvo_pct !== null && <span> · alvo: {d.config.alvo_pct}%</span>}
               </div>
               {!d.config.ativo && (
-                <div className="text-xs text-amber-800">
+                <div className="text-xs text-warning">
                   Para ligar falta:{' '}
                   {d.faltam_para_ligar.length
                     ? d.faltam_para_ligar.map((f) => textoSeguro(f, 'uma condição')).join(', ')

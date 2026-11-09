@@ -13,6 +13,8 @@ import {
   type PedidoPreparacao,
   type RespostaPedidosPreparacao,
 } from '@/services/pcp-faturamento'
+import { Skeleton } from '@/components/ui/skeleton'
+import Escolha from '@/components/Escolha'
 
 const moeda = (n: number | null) =>
   n === null ? 'pendente' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -81,7 +83,7 @@ const Linha = ({
           {p.estado === 'liberado' && <Badge>liberado para faturar</Badge>}
           {p.estado === 'apto' && <Badge>apto</Badge>}
           {p.estado === 'bloqueado' && (
-            <Badge className="bg-amber-100 text-amber-900 border-amber-300">bloqueado</Badge>
+            <Badge className="bg-warning/10 text-warning border-warning/30">bloqueado</Badge>
           )}
         </CardTitle>
       </CardHeader>
@@ -91,7 +93,7 @@ const Linha = ({
           {p.manual && p.motivo_manual ? ` · motivo do pedido manual: ${p.motivo_manual}` : ''}
         </div>
         {p.motivos_fila.map((m) => (
-          <div key={m} className="text-xs text-amber-800">
+          <div key={m} className="text-xs text-warning">
             {textoSeguro(m, 'Este pedido precisa de revisão.')}
           </div>
         ))}
@@ -102,7 +104,7 @@ const Linha = ({
               {i.quantidade} × pedido {moeda(i.preco_pedido)} / tabela {moeda(i.preco_tabela)}
             </span>
             {i.diferente_da_tabela && (
-              <Badge variant="outline" className="border-red-400 text-red-900">
+              <Badge variant="outline" className="border-destructive/30 text-destructive">
                 preço diferente da tabela
               </Badge>
             )}
@@ -112,10 +114,10 @@ const Linha = ({
           Subtotal recalculado: <strong>{moeda(p.subtotal_recalculado)}</strong> · subtotal do
           pedido: <strong>{moeda(p.subtotal_pedido)}</strong>
           {p.diferenca !== null && p.diferenca !== 0 && (
-            <span className="text-red-800"> · diferença de {moeda(p.diferenca)}</span>
+            <span className="text-destructive"> · diferença de {moeda(p.diferenca)}</span>
           )}
           {p.subtotal_pendente.length > 0 && (
-            <span className="text-amber-800">
+            <span className="text-warning">
               {' '}
               · sem preço na tabela: {p.subtotal_pendente.join(', ')}
             </span>
@@ -125,20 +127,15 @@ const Linha = ({
           <label className="text-xs" htmlFor={`fr-${p.pedido_id}`}>
             Frete
           </label>
-          <select
+          <Escolha
             id={`fr-${p.pedido_id}`}
-            className="border rounded px-2 py-1 text-sm bg-background"
+            className="w-64"
             value={modalidade}
             disabled={!pode.preparar}
-            onChange={(e) => setModalidade(e.target.value)}
-          >
-            <option value="">escolha a modalidade</option>
-            {MODALIDADES.map(([v, r]) => (
-              <option key={v} value={v}>
-                {r}
-              </option>
-            ))}
-          </select>
+            onChange={setModalidade}
+            placeholder="escolha a modalidade"
+            opcoes={MODALIDADES.map(([v, r]) => ({ valor: v, rotulo: r }))}
+          />
           {pode.preparar && (
             <Button
               size="sm"
@@ -316,7 +313,7 @@ const PedidosPreparacao = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -324,13 +321,13 @@ const PedidosPreparacao = () => {
       )}
       {aviso && (
         <div
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           {aviso}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && !dados.disponivel && (
         <Card>
           <CardContent className="py-6 text-sm">
@@ -360,7 +357,7 @@ const PedidosPreparacao = () => {
             .
           </p>
           {dados.aviso && (
-            <p className="mb-4 text-xs text-amber-800">{textoSeguro(dados.aviso, '')}</p>
+            <p className="mb-4 text-xs text-warning">{textoSeguro(dados.aviso, '')}</p>
           )}
           <div className="space-y-3">
             {dados.pedidos?.map((p) => (

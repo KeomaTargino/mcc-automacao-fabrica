@@ -21,6 +21,14 @@ import {
   type SugestaoAceitavel,
   type Rascunho,
 } from '@/lib/pcp/rascunho'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const CASOS: { rotulo: string; calcular: () => Sugestao }[] = [
   {
@@ -115,7 +123,7 @@ const Sugestoes = () => {
       </ComoFunciona>
 
       <div
-        className="mb-6 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+        className="mb-6 rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info"
         role="status"
       >
         <strong>Dados de demonstração.</strong> Casos de exemplo. Os cálculos com os 90 dias reais
@@ -129,11 +137,11 @@ const Sugestoes = () => {
               <CardTitle className="text-base flex items-center justify-between gap-2">
                 <span>{rotulo}</span>
                 {s.estado === 'calculada' ? (
-                  <Badge className="bg-green-100 text-green-900 border-green-300">
+                  <Badge className="bg-success/10 text-success border-success/30">
                     {s.quantidade} {s.unidade}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="border-amber-300 text-amber-900">
+                  <Badge variant="outline" className="border-warning/30 text-warning">
                     Bloqueada
                   </Badge>
                 )}
@@ -158,19 +166,25 @@ const Sugestoes = () => {
                     <strong>Fórmula:</strong> {s.memoria.formula_id} · <strong>Versão:</strong>{' '}
                     {s.memoria.versao_parametros}
                   </p>
-                  <table className="w-full">
-                    <tbody>
+                  <Table className="w-full">
+                    <TableBody>
                       {s.memoria.passos.map((p) => (
-                        <tr key={p.nome}>
-                          <td className="py-0.5 pr-2">{String(p.nome).replace(/_/g, ' ')}</td>
-                          <td className="py-0.5 pr-2">{p.valor ?? semInformacao()}</td>
-                          <td className="py-0.5 text-muted-foreground">{p.formula}</td>
-                        </tr>
+                        <TableRow key={p.nome}>
+                          <TableCell className="py-0.5 pr-2">
+                            {String(p.nome).replace(/_/g, ' ')}
+                          </TableCell>
+                          <TableCell className="py-0.5 pr-2">
+                            {p.valor ?? semInformacao()}
+                          </TableCell>
+                          <TableCell className="py-0.5 text-muted-foreground">
+                            {p.formula}
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                   {s.memoria.pendencias.length > 0 && (
-                    <ul className="list-disc list-inside text-amber-800">
+                    <ul className="list-disc list-inside text-warning">
                       {s.memoria.pendencias.map((p, i) => (
                         <li key={i}>{textoSeguro(p, 'Há uma pendência neste cálculo.')}</li>
                       ))}
@@ -203,30 +217,30 @@ const Sugestoes = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="pb-2">Sugestão</th>
-                  <th className="pb-2">Item</th>
-                  <th className="pb-2">Qtd</th>
-                  <th className="pb-2">Publicado</th>
-                  <th className="pb-2">Compra enviada</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="text-left text-muted-foreground">
+                  <TableHead className="pb-2">Sugestão</TableHead>
+                  <TableHead className="pb-2">Item</TableHead>
+                  <TableHead className="pb-2">Qtd</TableHead>
+                  <TableHead className="pb-2">Publicado</TableHead>
+                  <TableHead className="pb-2">Compra enviada</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rascunhos.map((r) => (
-                  <tr key={r.rascunho_id}>
-                    <td className="py-1 font-mono text-xs">{r.sugestao_id}</td>
-                    <td>{r.item}</td>
-                    <td>
+                  <TableRow key={r.rascunho_id}>
+                    <TableCell className="py-1 font-mono text-xs">{r.sugestao_id}</TableCell>
+                    <TableCell>{r.item}</TableCell>
+                    <TableCell>
                       {r.quantidade} {r.unidade}
-                    </td>
-                    <td>não (bloqueado)</td>
-                    <td>não (bloqueado)</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>não (bloqueado)</TableCell>
+                    <TableCell>não (bloqueado)</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

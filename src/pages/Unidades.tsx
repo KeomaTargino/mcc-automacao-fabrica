@@ -13,6 +13,16 @@ import {
   salvarUnidade,
   type RespostaUnidades,
 } from '@/services/pcp-faturamento'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
+import Escolha from '@/components/Escolha'
 
 const TIPOS: Record<string, string> = {
   franquia: 'franquia',
@@ -90,13 +100,13 @@ const Unidades = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">
           {aviso}
@@ -125,18 +135,12 @@ const Unidades = () => {
                 value={u.nome}
                 onChange={(e) => setU({ ...u, nome: e.target.value })}
               />
-              <select
-                className="border rounded-md px-2 py-2 text-sm bg-background"
-                aria-label="Tipo"
+              <Escolha
+                rotuloAria="Tipo"
                 value={u.tipo}
-                onChange={(e) => setU({ ...u, tipo: e.target.value })}
-              >
-                {Object.entries(TIPOS).map(([v, r]) => (
-                  <option key={v} value={v}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setU({ ...u, tipo: v })}
+                opcoes={Object.entries(TIPOS).map(([v, r]) => ({ valor: v, rotulo: r }))}
+              />
             </div>
             <Button
               size="sm"
@@ -171,32 +175,34 @@ const Unidades = () => {
       )}
       {dados && dados.unidades.length > 0 && (
         <div className="overflow-x-auto mb-6">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3">Cliente (Omie)</th>
-                <th className="py-2 pr-3">Unidade</th>
-                <th className="py-2 pr-3">Nome fantasia operacional</th>
-                <th className="py-2 pr-3">Tipo</th>
-                <th className="py-2 pr-3">Versão</th>
-                <th className="py-2">Alterado por</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm text-left">
+            <TableHeader>
+              <TableRow className="border-b text-xs text-muted-foreground">
+                <TableHead className="py-2 pr-3">Cliente (Omie)</TableHead>
+                <TableHead className="py-2 pr-3">Unidade</TableHead>
+                <TableHead className="py-2 pr-3">Nome fantasia operacional</TableHead>
+                <TableHead className="py-2 pr-3">Tipo</TableHead>
+                <TableHead className="py-2 pr-3">Versão</TableHead>
+                <TableHead className="py-2">Alterado por</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {dados.unidades.map((x) => (
-                <tr key={x.cliente_omie} className="border-b align-top">
-                  <td className="py-2 pr-3 font-mono">{x.cliente_omie}</td>
-                  <td className="py-2 pr-3">{x.unidade}</td>
-                  <td className="py-2 pr-3">{x.nome_fantasia_operacional}</td>
-                  <td className="py-2 pr-3">{TIPOS[x.tipo] ?? rotuloEstado(x.tipo)}</td>
-                  <td className="py-2 pr-3">{x.versao}</td>
-                  <td className="py-2">
+                <TableRow key={x.cliente_omie} className="border-b align-top">
+                  <TableCell className="py-2 pr-3 font-mono">{x.cliente_omie}</TableCell>
+                  <TableCell className="py-2 pr-3">{x.unidade}</TableCell>
+                  <TableCell className="py-2 pr-3">{x.nome_fantasia_operacional}</TableCell>
+                  <TableCell className="py-2 pr-3">
+                    {TIPOS[x.tipo] ?? rotuloEstado(x.tipo)}
+                  </TableCell>
+                  <TableCell className="py-2 pr-3">{x.versao}</TableCell>
+                  <TableCell className="py-2">
                     {x.alterado_por}, {new Date(x.alterado_em).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -210,17 +216,17 @@ const Unidades = () => {
         <Card className="mb-4">
           <CardContent className="pt-6 space-y-3 text-sm">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-              <select
-                className="border rounded-md px-2 py-2 text-sm bg-background"
-                aria-label="Canal"
+              <Escolha
+                rotuloAria="Canal"
                 value={nc.canal}
-                onChange={(e) => setNc({ ...nc, canal: e.target.value })}
-              >
-                <option value="nuvemshop">Nuvemshop</option>
-                <option value="lunet">Lunet</option>
-                <option value="omie">Omie</option>
-                <option value="manual">Manual</option>
-              </select>
+                onChange={(v) => setNc({ ...nc, canal: v })}
+                opcoes={[
+                  { valor: 'nuvemshop', rotulo: 'Nuvemshop' },
+                  { valor: 'lunet', rotulo: 'Lunet' },
+                  { valor: 'omie', rotulo: 'Omie' },
+                  { valor: 'manual', rotulo: 'Manual' },
+                ]}
+              />
               <Input
                 placeholder="Código do cliente no Omie"
                 value={nc.cliente}
@@ -379,32 +385,35 @@ const Unidades = () => {
       {dados && dados.tabela.length === 0 && <p className="text-sm">Nenhum preço cadastrado.</p>}
       {dados && dados.tabela.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3">Cliente / geral</th>
-                <th className="py-2 pr-3">Item</th>
-                <th className="py-2 pr-3">Preço</th>
-                <th className="py-2 pr-3">Vigência</th>
-                <th className="py-2">Versão</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm text-left">
+            <TableHeader>
+              <TableRow className="border-b text-xs text-muted-foreground">
+                <TableHead className="py-2 pr-3">Cliente / geral</TableHead>
+                <TableHead className="py-2 pr-3">Item</TableHead>
+                <TableHead className="py-2 pr-3">Preço</TableHead>
+                <TableHead className="py-2 pr-3">Vigência</TableHead>
+                <TableHead className="py-2">Versão</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {dados.tabela.map((p) => (
-                <tr key={p.chave + p.item + p.vigencia_inicio + p.versao} className="border-b">
-                  <td className="py-2 pr-3 font-mono">{p.chave}</td>
-                  <td className="py-2 pr-3 font-mono">{p.item}</td>
-                  <td className="py-2 pr-3">
+                <TableRow
+                  key={p.chave + p.item + p.vigencia_inicio + p.versao}
+                  className="border-b"
+                >
+                  <TableCell className="py-2 pr-3 font-mono">{p.chave}</TableCell>
+                  <TableCell className="py-2 pr-3 font-mono">{p.item}</TableCell>
+                  <TableCell className="py-2 pr-3">
                     {moeda(p.preco)} / {p.unidade}
-                  </td>
-                  <td className="py-2 pr-3">
+                  </TableCell>
+                  <TableCell className="py-2 pr-3">
                     {new Date(p.vigencia_inicio + 'T12:00:00').toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="py-2">{p.versao}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="py-2">{p.versao}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

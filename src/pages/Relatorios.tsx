@@ -38,7 +38,7 @@ const Rodape = ({ r }: { r: RodapeRelatorio }) => (
       {r.atualizado_em ? new Date(r.atualizado_em).toLocaleString('pt-BR') : 'sem registro'}
     </div>
     {r.lacunas.map((l) => (
-      <div key={l} className="text-amber-800">
+      <div key={l} className="text-warning">
         Lacuna: {textoSeguro(l, 'falta informação neste bloco')}
       </div>
     ))}
@@ -266,7 +266,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 {r === 'erro' && (
-                  <div className="text-sm text-red-800">
+                  <div className="text-sm text-destructive">
                     Não foi possível gerar este bloco agora.
                   </div>
                 )}

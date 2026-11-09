@@ -92,10 +92,10 @@ const Assistente = () => {
                     {textoSeguro(t.resposta.texto, 'Não encontrei uma resposta para isso.')}
                   </div>
                   {t.resposta.tipo === 'acao_recusada' && (
-                    <div className="text-xs text-amber-800">Tela indicada: {t.resposta.tela}</div>
+                    <div className="text-xs text-warning">Tela indicada: {t.resposta.tela}</div>
                   )}
                   {t.resposta.tipo === 'sem_dados' && (
-                    <ul className="list-disc pl-5 text-xs text-amber-800">
+                    <ul className="list-disc pl-5 text-xs text-warning">
                       {t.resposta.falta.map((f) => (
                         <li key={f}>Falta: {textoSeguro(f, 'uma informação')}</li>
                       ))}

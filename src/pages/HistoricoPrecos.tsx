@@ -10,6 +10,8 @@ import {
   obterHistorico,
   type RespostaHistorico,
 } from '@/services/pcp-compras'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const moeda = (n: number | null) =>
   n === null ? 'pendente' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -83,13 +85,13 @@ const HistoricoPrecos = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">
           {aviso}
@@ -169,20 +171,20 @@ const HistoricoPrecos = () => {
           )}
           {dados.registros.length > 0 && (
             <div className="overflow-x-auto mb-6">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="py-2 pr-3">Data</th>
-                    <th className="py-2 pr-3">Fornecedor</th>
-                    <th className="py-2 pr-3">Pedido</th>
-                    <th className="py-2 pr-3">Quantidade</th>
-                    <th className="py-2 pr-3">Preço</th>
-                    <th className="py-2">Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-sm text-left">
+                <TableHeader>
+                  <TableRow className="border-b text-xs text-muted-foreground">
+                    <TableHead className="py-2 pr-3">Data</TableHead>
+                    <TableHead className="py-2 pr-3">Fornecedor</TableHead>
+                    <TableHead className="py-2 pr-3">Pedido</TableHead>
+                    <TableHead className="py-2 pr-3">Quantidade</TableHead>
+                    <TableHead className="py-2 pr-3">Preço</TableHead>
+                    <TableHead className="py-2">Situação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {dados.registros.map((r) => (
-                    <tr
+                    <TableRow
                       key={r.chave}
                       className={`border-b align-top ${r.estado === 'comparavel' ? '' : 'text-muted-foreground'}`}
                     >

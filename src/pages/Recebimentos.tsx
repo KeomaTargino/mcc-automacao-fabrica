@@ -13,6 +13,15 @@ import {
   salvarParcelas,
   type RespostaRecebimentos,
 } from '@/services/pcp-compras'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const moeda = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -109,13 +118,13 @@ const Recebimentos = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">
           {aviso}
@@ -244,14 +253,14 @@ const Recebimentos = () => {
                     </Badge>
                   )}
                   {l.pendencias.map((p) => (
-                    <div key={p} className="text-xs text-amber-800">
+                    <div key={p} className="text-xs text-warning">
                       {textoSeguro(p, 'Há uma pendência neste item.')}
                     </div>
                   ))}
                 </div>
               ))}
               {r.diferencas.map((d) => (
-                <div key={d.pedidoId + d.item} className="text-red-800">
+                <div key={d.pedidoId + d.item} className="text-destructive">
                   {d.tipo === 'falta' ? 'Falta' : 'Sobra'} de {d.diferenca} no item {d.item} do
                   pedido {d.pedidoId} (pedido {d.pedido}, recebido {d.recebido})
                 </div>
@@ -260,7 +269,7 @@ const Recebimentos = () => {
                 <div className="text-muted-foreground">Sem diferença.</div>
               )}
               {r.avisos_ja_paga.map((a) => (
-                <div key={a} className="text-amber-800 font-medium">
+                <div key={a} className="text-warning font-medium">
                   {textoSeguro(a, 'Este pedido já foi pago.')}
                 </div>
               ))}
@@ -356,38 +365,38 @@ const Recebimentos = () => {
       )}
       {dados && dados.parcelas.length > 0 && (
         <div className="overflow-x-auto mb-6">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3">Pedido</th>
-                <th className="py-2 pr-3">Parcela</th>
-                <th className="py-2 pr-3">Vencimento</th>
-                <th className="py-2 pr-3">Valor</th>
-                <th className="py-2">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm text-left">
+            <TableHeader>
+              <TableRow className="border-b text-xs text-muted-foreground">
+                <TableHead className="py-2 pr-3">Pedido</TableHead>
+                <TableHead className="py-2 pr-3">Parcela</TableHead>
+                <TableHead className="py-2 pr-3">Vencimento</TableHead>
+                <TableHead className="py-2 pr-3">Valor</TableHead>
+                <TableHead className="py-2">Situação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {dados.parcelas.map((p) => (
-                <tr key={p.pedido + p.numero} className="border-b">
-                  <td className="py-2 pr-3 font-mono">{p.pedido}</td>
-                  <td className="py-2 pr-3">{p.numero}</td>
-                  <td className="py-2 pr-3">
+                <TableRow key={p.pedido + p.numero} className="border-b">
+                  <TableCell className="py-2 pr-3 font-mono">{p.pedido}</TableCell>
+                  <TableCell className="py-2 pr-3">{p.numero}</TableCell>
+                  <TableCell className="py-2 pr-3">
                     {new Date(p.vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="py-2 pr-3">{moeda(p.valor)}</td>
-                  <td className="py-2">
+                  </TableCell>
+                  <TableCell className="py-2 pr-3">{moeda(p.valor)}</TableCell>
+                  <TableCell className="py-2">
                     {p.pago_antecipado ? (
-                      <Badge className="bg-amber-100 text-amber-900 border-amber-300">
+                      <Badge className="bg-warning/10 text-warning border-warning/30">
                         já paga ({p.referencia_pagamento}): não lançar nova conta a pagar
                       </Badge>
                     ) : (
                       'prevista'
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -488,12 +497,12 @@ const Recebimentos = () => {
             Pedido {n.pedido}, nota de demonstração {n.numero ?? ''}:{' '}
             <Badge variant="outline">{n.estado === 'conferida' ? 'confere' : 'pendente'}</Badge>
             {n.pendencias.map((p) => (
-              <div key={p.mensagem} className="text-xs text-red-800">
+              <div key={p.mensagem} className="text-xs text-destructive">
                 {textoSeguro(p.mensagem, 'Há uma diferença para conferir.')}
               </div>
             ))}
             {n.avisos.map((a) => (
-              <div key={a} className="text-xs text-amber-800">
+              <div key={a} className="text-xs text-warning">
                 {textoSeguro(a, 'Confira esta nota.')}
               </div>
             ))}

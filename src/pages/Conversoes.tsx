@@ -6,6 +6,15 @@ import { Input } from '@/components/ui/input'
 import ComoFunciona from '@/components/ComoFunciona'
 import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { obterConversoes, salvarConversao, type RespostaConversoes } from '@/services/pcp-compras'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
@@ -79,13 +88,13 @@ const Conversoes = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">
           {aviso}
@@ -154,39 +163,39 @@ const Conversoes = () => {
       )}
       {dados && dados.itens.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3">Item</th>
-                <th className="py-2 pr-3">Fornecedor</th>
-                <th className="py-2 pr-3">Apresentação</th>
-                <th className="py-2 pr-3">Fator</th>
-                <th className="py-2 pr-3">Versão</th>
-                <th className="py-2">Confirmado por</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm text-left">
+            <TableHeader>
+              <TableRow className="border-b text-xs text-muted-foreground">
+                <TableHead className="py-2 pr-3">Item</TableHead>
+                <TableHead className="py-2 pr-3">Fornecedor</TableHead>
+                <TableHead className="py-2 pr-3">Apresentação</TableHead>
+                <TableHead className="py-2 pr-3">Fator</TableHead>
+                <TableHead className="py-2 pr-3">Versão</TableHead>
+                <TableHead className="py-2">Confirmado por</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {dados.itens.map((c) => (
-                <tr
+                <TableRow
                   key={c.chave + c.versao}
                   className={`border-b align-top ${c.vigente ? '' : 'text-muted-foreground'}`}
                 >
-                  <td className="py-2 pr-3 font-mono">{c.item}</td>
-                  <td className="py-2 pr-3">{c.fornecedor ?? 'geral'}</td>
-                  <td className="py-2 pr-3">{c.apresentacao}</td>
-                  <td className="py-2 pr-3">
+                  <TableCell className="py-2 pr-3 font-mono">{c.item}</TableCell>
+                  <TableCell className="py-2 pr-3">{c.fornecedor ?? 'geral'}</TableCell>
+                  <TableCell className="py-2 pr-3">{c.apresentacao}</TableCell>
+                  <TableCell className="py-2 pr-3">
                     1 {c.unidade_compra} = {c.fator} {c.unidade_estoque}
-                  </td>
-                  <td className="py-2 pr-3">
+                  </TableCell>
+                  <TableCell className="py-2 pr-3">
                     {c.versao} {c.vigente && <Badge variant="outline">vigente</Badge>}
-                  </td>
-                  <td className="py-2">
+                  </TableCell>
+                  <TableCell className="py-2">
                     {c.confirmado_por}, {new Date(c.confirmado_em).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

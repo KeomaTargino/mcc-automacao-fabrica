@@ -150,7 +150,7 @@ const Exportacao = () => {
                 <span>{l.registros === null ? '—' : l.registros} registros</span>
                 <span>{l.exportada ? 'no pacote' : 'fora do pacote'}</span>
                 {l.motivo && (
-                  <span className="text-xs text-amber-800">
+                  <span className="text-xs text-warning">
                     {textoSeguro(l.motivo, 'fora do pacote')}
                   </span>
                 )}

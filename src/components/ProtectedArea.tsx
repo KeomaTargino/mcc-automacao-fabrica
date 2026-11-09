@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { obterPerfil, verificarPrimeiraSenha, type RespostaPerfil } from '@/services/pcp-access'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type EstadoAcesso =
   | 'carregando'
@@ -65,9 +66,7 @@ export default function ProtectedArea({ area, children }: { area: string; childr
     if (!authLoading && !isAuthenticated) return <Navigate to="/login" replace />
     return (
       <div className="container mx-auto py-8 px-4">
-        <p className="text-sm text-muted-foreground" role="status">
-          Carregando…
-        </p>
+        <Skeleton className="h-24 w-full" aria-label="Carregando" />
       </div>
     )
   }

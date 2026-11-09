@@ -13,6 +13,7 @@ import {
   type RespostaLoop2,
   type RespostaLoop2Somente,
 } from '@/services/pcp-loop2'
+import Escolha from '@/components/Escolha'
 
 const campo = 'border rounded px-2 py-1 text-sm bg-background'
 const proporcao = (p: number | null, na: boolean) =>
@@ -28,21 +29,16 @@ const Ligar = ({
   const [cod, setCod] = useState('')
   return (
     <span className="inline-flex items-center gap-2">
-      <select
-        aria-label="Pergunta prioritária"
-        className={campo}
+      <Escolha
+        rotuloAria="Pergunta prioritária"
+        className="w-64"
         value={cod}
-        onChange={(e) => setCod(e.target.value)}
-      >
-        <option value="">ligar a uma prioritária…</option>
-        {prioritarias
+        onChange={setCod}
+        placeholder="ligar a uma prioritária…"
+        opcoes={prioritarias
           .filter((p) => p.ativa)
-          .map((p) => (
-            <option key={p.codigo} value={p.codigo}>
-              {p.codigo} — {p.texto}
-            </option>
-          ))}
-      </select>
+          .map((p) => ({ valor: p.codigo, rotulo: `${p.codigo} — ${p.texto}` }))}
+      />
       <Button size="sm" variant="outline" disabled={!cod} onClick={() => onLigar(cod)}>
         Ligar
       </Button>
@@ -128,7 +124,7 @@ const LoopPerguntas = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
@@ -188,7 +184,7 @@ const LoopPerguntas = () => {
                 {d.config.alvo_pct !== null && <span> · alvo: {d.config.alvo_pct}%</span>}
               </div>
               {!d.config.ativo && (
-                <div className="text-xs text-amber-800">
+                <div className="text-xs text-warning">
                   Para ligar falta:{' '}
                   {d.faltam_para_ligar.length
                     ? d.faltam_para_ligar.map((f) => textoSeguro(f, 'uma condição')).join(', ')
@@ -224,11 +220,16 @@ const LoopPerguntas = () => {
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
                   />
-                  <select className={campo} value={area} onChange={(e) => setArea(e.target.value)}>
-                    <option value="pcp">PCP</option>
-                    <option value="compras">Compras</option>
-                    <option value="faturamento">Faturamento</option>
-                  </select>
+                  <Escolha
+                    className="w-40"
+                    value={area}
+                    onChange={setArea}
+                    opcoes={[
+                      { valor: 'pcp', rotulo: 'PCP' },
+                      { valor: 'compras', rotulo: 'Compras' },
+                      { valor: 'faturamento', rotulo: 'Faturamento' },
+                    ]}
+                  />
                   <Button
                     size="sm"
                     variant="outline"

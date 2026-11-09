@@ -134,8 +134,8 @@ const Parametros = () => {
       <div
         className={`mb-6 rounded-md border px-4 py-3 text-sm ${
           origem === 'aprovada'
-            ? 'border-green-300 bg-green-50 text-green-900'
-            : 'border-amber-300 bg-amber-50 text-amber-900'
+            ? 'border-success/30 bg-success/10 text-success'
+            : 'border-warning/30 bg-warning/10 text-warning'
         }`}
         role="status"
       >
@@ -157,11 +157,11 @@ const Parametros = () => {
           <CardTitle className="text-base flex items-center justify-between gap-2">
             <span>Valores oficiais</span>
             {podeAprovar ? (
-              <Badge className="bg-green-100 text-green-900 border-green-300">
+              <Badge className="bg-success/10 text-success border-success/30">
                 Você pode aprovar
               </Badge>
             ) : (
-              <Badge variant="outline" className="border-amber-300 text-amber-900">
+              <Badge variant="outline" className="border-warning/30 text-warning">
                 Você não tem acesso a esta ação. Fale com o gestor.
               </Badge>
             )}
@@ -271,7 +271,7 @@ const Parametros = () => {
 
           {validacao.bloqueios.length > 0 && (
             <div
-              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
               role="alert"
             >
               <p className="font-medium">O que falta para aprovar (nada é preenchido sozinho):</p>

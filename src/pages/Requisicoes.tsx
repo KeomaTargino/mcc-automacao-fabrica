@@ -18,6 +18,7 @@ import {
   type RequisicaoCompra,
   type RespostaRequisicoes,
 } from '@/services/pcp-compras'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const moeda = (n: number | null) =>
   n === null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -152,13 +153,13 @@ const Requisicoes = () => {
       </ComoFunciona>
       {erro && (
         <div
-          className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
           {erro}
         </div>
       )}
-      {!erro && !dados && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">
           {aviso}
@@ -166,7 +167,7 @@ const Requisicoes = () => {
       )}
       {dados && dados.alcadas_cadastradas === 0 && (
         <div
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
           role="status"
         >
           Alçada não cadastrada: a aprovação real fica parada até o dono informar as alçadas.
@@ -263,7 +264,7 @@ const Requisicoes = () => {
                     <span>Necessária até {r.data_necessaria}</span>
                     <Badge variant="outline">{ESTADOS[r.estado] ?? rotuloEstado(r.estado)}</Badge>
                     {r.emergencial && (
-                      <Badge className="bg-red-100 text-red-900 border-red-300">
+                      <Badge className="bg-destructive/10 text-destructive border-destructive/30">
                         emergencial: {r.motivo_emergencia}
                       </Badge>
                     )}
@@ -283,7 +284,7 @@ const Requisicoes = () => {
                             : ''}
                         </div>
                         {it.pendencias.map((p) => (
-                          <div key={p} className="text-xs text-amber-800">
+                          <div key={p} className="text-xs text-warning">
                             {textoSeguro(p, 'Há uma pendência neste item.')}
                           </div>
                         ))}
@@ -300,7 +301,9 @@ const Requisicoes = () => {
                               <Badge
                                 variant="outline"
                                 className={
-                                  c.acima_da_tolerancia ? 'border-red-400 text-red-900' : ''
+                                  c.acima_da_tolerancia
+                                    ? 'border-destructive/30 text-destructive'
+                                    : ''
                                 }
                               >
                                 {c.diferenca_percentual > 0 ? '+' : ''}
