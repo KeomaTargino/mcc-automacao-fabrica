@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Escolha from '@/components/Escolha'
+import Aviso from '@/components/Aviso'
 
 // Planejamento: a programação fica no servidor (SPEC-4-001). Os parâmetros e o calendário vêm da versão
 // aprovada em /parametros; sem eles, "Publicar" fica desabilitado. A tela relê o estado a cada 30 segundos
@@ -141,24 +142,18 @@ const Planejamento = () => {
       </ComoFunciona>
 
       {erroCarga && (
-        <div
-          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           Não foi possível carregar.{' '}
           <Button variant="outline" size="sm" onClick={carregar}>
             Tentar de novo
           </Button>
-        </div>
+        </Aviso>
       )}
 
       {!situacao.pode && !erroCarga && (
-        <div
-          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
+        <Aviso nivel="atencao">
           {textoSeguro(situacao.motivo, 'Aprove os parâmetros antes de publicar.')}.
-        </div>
+        </Aviso>
       )}
 
       {situacao.pode && calendario && (

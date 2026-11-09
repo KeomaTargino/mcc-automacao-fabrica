@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import Aviso from '@/components/Aviso'
 
 const moeda = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -117,12 +118,9 @@ const Recebimentos = () => {
         </p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
       {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (

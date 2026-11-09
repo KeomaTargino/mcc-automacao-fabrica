@@ -8,6 +8,7 @@ import { mensagemDeErro, textoSeguro } from '@/lib/pcp/textos'
 import { obterPerfil } from '@/services/pcp-access'
 import { obterParametros, aprovarParametrosServidor } from '@/services/pcp-parametros'
 import { validarParametros, type Parametros } from '@/lib/pcp/parametros'
+import Aviso from '@/components/Aviso'
 
 // Tela de parâmetros oficiais — SPEC-2-002 CA-P1/P2 (task d2a44349).
 // O PCP aprova aqui os parâmetros oficiais (CL-006): capacidade, lote, horizonte
@@ -270,17 +271,14 @@ const Parametros = () => {
           </div>
 
           {validacao.bloqueios.length > 0 && (
-            <div
-              className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
-              role="alert"
-            >
+            <Aviso nivel="atencao" topo>
               <p className="font-medium">O que falta para aprovar (nada é preenchido sozinho):</p>
               <ul className="mt-1 list-disc list-inside">
                 {validacao.bloqueios.map((b, i) => (
                   <li key={i}>{textoSeguro(b, 'Complete os campos destacados.')}</li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
 
           <Button onClick={aprovar} disabled={!podeAprovar || !validacao.aprovavel}>

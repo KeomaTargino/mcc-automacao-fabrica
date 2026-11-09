@@ -15,6 +15,7 @@ import {
 } from '@/services/pcp-faturamento'
 import { Skeleton } from '@/components/ui/skeleton'
 import Escolha from '@/components/Escolha'
+import Aviso from '@/components/Aviso'
 
 const moeda = (n: number | null) =>
   n === null ? 'pendente' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -312,21 +313,11 @@ const PedidosPreparacao = () => {
         </p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
-      {aviso && (
-        <div
-          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
-          {aviso}
-        </div>
-      )}
+      {aviso && <Aviso nivel="atencao">{aviso}</Aviso>}
       {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && !dados.disponivel && (
         <Card>

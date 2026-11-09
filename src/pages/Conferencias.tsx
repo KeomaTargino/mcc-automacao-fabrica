@@ -32,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Escolha from '@/components/Escolha'
+import Aviso from '@/components/Aviso'
 
 // Conferências: a expedição e a câmara conferem e o PCP aprova no servidor (SPEC-4-001). Os identificadores
 // nascem aqui e são reaproveitados no reenvio da mesma tentativa. A tela relê o estado a cada 30 segundos
@@ -171,24 +172,18 @@ const Conferencias = () => {
       </ComoFunciona>
 
       {erroCarga && (
-        <div
-          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           Não foi possível carregar.{' '}
           <Button variant="outline" size="sm" onClick={carregar}>
             Tentar de novo
           </Button>
-        </div>
+        </Aviso>
       )}
 
       {!erroCarga && estado && ordens.length === 0 && (
-        <div
-          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
+        <Aviso nivel="atencao">
           Ainda não há programação publicada. O PCP publica em Planejamento.
-        </div>
+        </Aviso>
       )}
 
       {ordens.length > 0 && (
@@ -327,17 +322,14 @@ const Conferencias = () => {
                   </Table>
                 )}
                 {fila && fila.pendencias.length > 0 && (
-                  <div
-                    className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
-                    role="alert"
-                  >
+                  <Aviso nivel="atencao">
                     <p className="font-medium">Pendências (nada é preenchido por padrão):</p>
                     <ul className="mt-1 list-disc list-inside">
                       {fila.pendencias.map((p, i) => (
                         <li key={i}>{p}</li>
                       ))}
                     </ul>
-                  </div>
+                  </Aviso>
                 )}
               </CardContent>
             </Card>

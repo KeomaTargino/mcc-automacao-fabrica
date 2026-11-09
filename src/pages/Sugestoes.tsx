@@ -122,13 +122,10 @@ const Sugestoes = () => {
         </p>
       </ComoFunciona>
 
-      <div
-        className="mb-6 rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info"
-        role="status"
-      >
+      <Aviso nivel="info" topo>
         <strong>Dados de demonstração.</strong> Casos de exemplo. Os cálculos com os 90 dias reais
         do Omie vêm depois da aprovação do método e da conexão real.
-      </div>
+      </Aviso>
 
       <div className="space-y-3">
         {sugestoes.map(({ s, rotulo }) => (

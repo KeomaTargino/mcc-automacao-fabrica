@@ -11,6 +11,7 @@ import {
   registrarVeredito,
   type RespostaLoop,
 } from '@/services/pcp-loop'
+import Aviso from '@/components/Aviso'
 
 const campo = 'border rounded px-2 py-1 text-sm bg-background'
 const proporcao = (p: number | null, na: boolean) =>
@@ -93,12 +94,9 @@ const LoopAlertas = () => {
         </p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
       {d && (
         <div className="space-y-4">

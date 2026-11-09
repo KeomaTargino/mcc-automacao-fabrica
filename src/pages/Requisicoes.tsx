@@ -19,6 +19,7 @@ import {
   type RespostaRequisicoes,
 } from '@/services/pcp-compras'
 import { Skeleton } from '@/components/ui/skeleton'
+import Aviso from '@/components/Aviso'
 
 const moeda = (n: number | null) =>
   n === null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -152,12 +153,9 @@ const Requisicoes = () => {
         <p>Se algo mudar depois de aprovar, a aprovação cai.</p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
       {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {aviso && (
@@ -166,12 +164,9 @@ const Requisicoes = () => {
         </div>
       )}
       {dados && dados.alcadas_cadastradas === 0 && (
-        <div
-          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
+        <Aviso nivel="atencao">
           Alçada não cadastrada: a aprovação real fica parada até o dono informar as alçadas.
-        </div>
+        </Aviso>
       )}
       {dados && dados.tolerancia_percentual === null && (
         <p className="mb-4 text-xs text-muted-foreground">

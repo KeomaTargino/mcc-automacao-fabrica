@@ -20,6 +20,7 @@ import {
 } from '@/services/pcp-alertas'
 import { Skeleton } from '@/components/ui/skeleton'
 import Escolha from '@/components/Escolha'
+import Aviso from '@/components/Aviso'
 
 const TIPO: Record<string, string> = {
   estoque: 'Estoque',
@@ -294,21 +295,11 @@ const Alertas = () => {
         </div>
       )}
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
-      {aviso && (
-        <div
-          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
-          {aviso}
-        </div>
-      )}
+      {aviso && <Aviso nivel="atencao">{aviso}</Aviso>}
       {rodada && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm" role="status">
           {rodada.executou

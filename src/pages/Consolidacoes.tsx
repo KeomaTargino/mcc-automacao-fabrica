@@ -6,6 +6,7 @@ import { linhasConsolidacao, type EstadoParaFila } from '@/lib/pcp/conferencia-s
 import { lerEstadoProducao } from '@/services/pcp-producao'
 import ComoFunciona from '@/components/ComoFunciona'
 import { rotuloEstado, semInformacao, textoSeguro } from '@/lib/pcp/textos'
+import Aviso from '@/components/Aviso'
 
 // Consolidações: só leitura (SPEC-4-001). Mostra a ordem, as conferências de expedição e de câmara, a
 // aprovação e o estado da ordem preparada, lidos do servidor. Não há botão de envio: o envio ao Omie é a
@@ -53,24 +54,16 @@ const Consolidacoes = () => {
       </ComoFunciona>
 
       {erroCarga && (
-        <div
-          className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           Não foi possível carregar.{' '}
           <Button variant="outline" size="sm" onClick={carregar}>
             Tentar de novo
           </Button>
-        </div>
+        </Aviso>
       )}
 
       {!erroCarga && estado && linhas.length === 0 && (
-        <div
-          className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-          role="status"
-        >
-          Ainda não há programação publicada.
-        </div>
+        <Aviso nivel="atencao">Ainda não há programação publicada.</Aviso>
       )}
 
       <div className="space-y-3">

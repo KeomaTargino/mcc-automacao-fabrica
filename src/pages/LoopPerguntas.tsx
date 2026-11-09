@@ -14,6 +14,7 @@ import {
   type RespostaLoop2Somente,
 } from '@/services/pcp-loop2'
 import Escolha from '@/components/Escolha'
+import Aviso from '@/components/Aviso'
 
 const campo = 'border rounded px-2 py-1 text-sm bg-background'
 const proporcao = (p: number | null, na: boolean) =>
@@ -123,12 +124,9 @@ const LoopPerguntas = () => {
         </p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
       {msg && (
         <p className="text-sm mb-3" role="status">

@@ -11,6 +11,7 @@ import {
   type RespostaFornecedores,
 } from '@/services/pcp-compras'
 import { Skeleton } from '@/components/ui/skeleton'
+import Aviso from '@/components/Aviso'
 
 const CONTATO_VAZIO: ContatoFornecedor = { nome: '', funcao: '', telefone: '', email: '' }
 
@@ -89,22 +90,16 @@ const Fornecedores = () => {
         </p>
       </ComoFunciona>
       {erro && (
-        <div
-          className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <Aviso nivel="bloqueio" topo>
           {erro}
-        </div>
+        </Aviso>
       )}
       {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
       {dados && (
-        <div
-          className="mb-4 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-xs text-warning"
-          role="status"
-        >
+        <Aviso nivel="atencao">
           {textoSeguro(dados.leitura_omie, 'A lista de fornecedores do Omie ainda não foi lida')}.
           Enquanto isso, o fornecedor é identificado pelo código que vem no pedido de compra.
-        </div>
+        </Aviso>
       )}
       {aviso && (
         <div className="mb-4 rounded-md border px-4 py-3 text-sm bg-muted" role="status">

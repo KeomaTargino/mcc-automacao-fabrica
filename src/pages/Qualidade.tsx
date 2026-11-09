@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import Aviso from '@/components/Aviso'
 
 const COR_BLOQUEIO: Record<string, string> = {
   calculo_estoque: 'bg-warning/10 text-warning border-warning/30',
@@ -65,21 +66,15 @@ const FaltantesOmie = () => {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {erro && (
-          <div
-            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive"
-            role="alert"
-          >
+          <Aviso nivel="bloqueio" topo>
             {erro}
-          </div>
+          </Aviso>
         )}
         {!erro && !dados && <Skeleton className="h-24 w-full" aria-label="Carregando" />}
         {dados && dados.situacao === 'catalogo_incompleto' && (
-          <div
-            className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning"
-            role="status"
-          >
+          <Aviso nivel="atencao">
             {MOTIVO_INCOMPLETO[dados.motivo ?? ''] ?? 'A lista ainda não pode ser montada.'}
-          </div>
+          </Aviso>
         )}
         {dados && dados.situacao === 'ok' && dados.itens.length === 0 && (
           <p>Nenhum produto do estoque está fora do cadastro do Omie.</p>
@@ -147,13 +142,10 @@ const Qualidade = () => {
 
       <FaltantesOmie />
 
-      <div
-        className="mb-6 rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info"
-        role="status"
-      >
+      <Aviso nivel="info">
         <strong>Dados de demonstração.</strong> Os produtos abaixo são exemplos e não existem no
         cadastro. Com o cadastro completo, esta visão mostra os dados oficiais.
-      </div>
+      </Aviso>
 
       <div className="grid gap-4 md:grid-cols-2">
         {produtos.map((p) => (
