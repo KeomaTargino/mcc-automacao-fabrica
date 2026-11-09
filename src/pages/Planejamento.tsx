@@ -206,6 +206,7 @@ const Planejamento = () => {
                   <span className="text-muted-foreground">Quantidade</span>
                   <Input
                     type="number"
+                    inputMode="decimal"
                     min={1}
                     value={quantidade}
                     onChange={(e) => setQuantidade(e.target.value)}

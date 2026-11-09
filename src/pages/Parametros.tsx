@@ -174,6 +174,7 @@ const Parametros = () => {
               <span className="text-muted-foreground">Capacidade padrão/dia</span>
               <Input
                 type="number"
+                inputMode="decimal"
                 min={1}
                 value={capacidade}
                 onChange={(e) => setCapacidade(e.target.value)}
@@ -184,6 +185,7 @@ const Parametros = () => {
               <span className="text-muted-foreground">Lote/múltiplo</span>
               <Input
                 type="number"
+                inputMode="decimal"
                 min={1}
                 value={lote}
                 onChange={(e) => setLote(e.target.value)}
@@ -194,6 +196,7 @@ const Parametros = () => {
               <span className="text-muted-foreground">Horizonte (dias)</span>
               <Input
                 type="number"
+                inputMode="decimal"
                 min={1}
                 value={horizonte}
                 onChange={(e) => setHorizonte(e.target.value)}
@@ -226,6 +229,7 @@ const Parametros = () => {
                 />
                 <Input
                   type="number"
+                  inputMode="decimal"
                   min={0}
                   max={1}
                   step={0.01}

@@ -35,6 +35,8 @@ import Escolha from '@/components/Escolha'
 import Aviso from '@/components/Aviso'
 import Confirmar from '@/components/Confirmar'
 import { toast } from 'sonner'
+import RodapeFixo from '@/components/RodapeFixo'
+import PainelFiltros from '@/components/PainelFiltros'
 
 // Conferências: a expedição e a câmara conferem e o PCP aprova no servidor (SPEC-4-001). Os identificadores
 // nascem aqui e são reaproveitados no reenvio da mesma tentativa. A tela relê o estado a cada 30 segundos
@@ -202,17 +204,19 @@ const Conferencias = () => {
 
       {ordens.length > 0 && (
         <>
-          <label className="mb-4 block max-w-md space-y-1 text-sm">
-            <span className="text-muted-foreground">Ordem</span>
-            <Escolha
-              value={opAtual}
-              onChange={setOpId}
-              opcoes={ordens.map((o) => ({
-                valor: o.op_id,
-                rotulo: `${o.op_id} · ${o.produto} · ${o.data}`,
-              }))}
-            />
-          </label>
+          <PainelFiltros>
+            <label className="mb-4 block max-w-md space-y-1 text-sm">
+              <span className="text-muted-foreground">Ordem</span>
+              <Escolha
+                value={opAtual}
+                onChange={setOpId}
+                opcoes={ordens.map((o) => ({
+                  valor: o.op_id,
+                  rotulo: `${o.op_id} · ${o.produto} · ${o.data}`,
+                }))}
+              />
+            </label>
+          </PainelFiltros>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -220,39 +224,41 @@ const Conferencias = () => {
                 <CardTitle className="text-base">Registrar conferência</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => registrar('recebimento_expedicao')}
-                    disabled={!podeExp || enviando}
-                    className={
-                      fila?.quantidades.recebido_expedicao != null
-                        ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
-                        : undefined
-                    }
-                  >
-                    Conferir expedição
-                    {fila?.quantidades.recebido_expedicao != null
-                      ? `: ${fila.quantidades.recebido_expedicao} UN`
-                      : ''}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => registrar('entrada_camara')}
-                    disabled={!podeCam || enviando}
-                    className={
-                      fila?.quantidades.entrada_camara != null
-                        ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
-                        : undefined
-                    }
-                  >
-                    Conferir câmara
-                    {fila?.quantidades.entrada_camara != null
-                      ? `: ${fila.quantidades.entrada_camara} UN`
-                      : ''}
-                  </Button>
-                </div>
+                <RodapeFixo>
+                  <div className="flex gap-2 max-md:[&>button]:flex-1">
+                    <Button
+                      size="sm"
+                      onClick={() => registrar('recebimento_expedicao')}
+                      disabled={!podeExp || enviando}
+                      className={
+                        fila?.quantidades.recebido_expedicao != null
+                          ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
+                          : undefined
+                      }
+                    >
+                      Conferir expedição
+                      {fila?.quantidades.recebido_expedicao != null
+                        ? `: ${fila.quantidades.recebido_expedicao} UN`
+                        : ''}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => registrar('entrada_camara')}
+                      disabled={!podeCam || enviando}
+                      className={
+                        fila?.quantidades.entrada_camara != null
+                          ? 'bg-success text-success-foreground hover:bg-success/90 border-success'
+                          : undefined
+                      }
+                    >
+                      Conferir câmara
+                      {fila?.quantidades.entrada_camara != null
+                        ? `: ${fila.quantidades.entrada_camara} UN`
+                        : ''}
+                    </Button>
+                  </div>
+                </RodapeFixo>
                 {!podeExp && !podeCam && (
                   <p className="text-xs text-warning" role="note">
                     Modo visualização: sua conta não confere nesta tela.
@@ -263,6 +269,7 @@ const Conferencias = () => {
                   <Input
                     ref={inputQtd}
                     type="number"
+                    inputMode="decimal"
                     step="1"
                     min="0"
                     placeholder="Digite a quantidade conferida"
@@ -373,6 +380,7 @@ const Conferencias = () => {
                     <span className="text-muted-foreground">Quantidade final (UN)</span>
                     <Input
                       type="number"
+                      inputMode="decimal"
                       min={0}
                       value={qtdFinal}
                       onChange={(e) => setQtdFinal(e.target.value)}
@@ -432,28 +440,48 @@ const Conferencias = () => {
                 <p className="text-muted-foreground">Nenhuma conferência ainda.</p>
               )}
               {registros.length > 0 && (
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="text-left text-muted-foreground">
-                      <TableHead className="pb-2">Etapa</TableHead>
-                      <TableHead className="pb-2">Qtd</TableHead>
-                      <TableHead className="pb-2">Autor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-2 md:hidden">
                     {registros.map((r) => (
-                      <TableRow key={r.registro_id}>
-                        <TableCell>
-                          {r.etapa === 'recebimento_expedicao' ? 'expedição' : 'câmara'}
-                        </TableCell>
-                        <TableCell>
+                      <div
+                        key={r.registro_id}
+                        className="flex items-start justify-between gap-2 rounded-md border p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            {r.etapa === 'recebimento_expedicao' ? 'Expedição' : 'Câmara'}
+                          </p>
+                          <p className="break-words text-xs text-muted-foreground">{r.autor}</p>
+                        </div>
+                        <p className="shrink-0 font-semibold">
                           {r.quantidade} {r.unidade}
-                        </TableCell>
-                        <TableCell className="text-xs">{r.autor}</TableCell>
-                      </TableRow>
+                        </p>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <Table className="hidden w-full md:table">
+                    <TableHeader>
+                      <TableRow className="text-left text-muted-foreground">
+                        <TableHead className="pb-2">Etapa</TableHead>
+                        <TableHead className="pb-2">Qtd</TableHead>
+                        <TableHead className="hidden pb-2 lg:table-cell">Autor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {registros.map((r) => (
+                        <TableRow key={r.registro_id}>
+                          <TableCell>
+                            {r.etapa === 'recebimento_expedicao' ? 'expedição' : 'câmara'}
+                          </TableCell>
+                          <TableCell>
+                            {r.quantidade} {r.unidade}
+                          </TableCell>
+                          <TableCell className="hidden text-xs lg:table-cell">{r.autor}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
           </Card>

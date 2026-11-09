@@ -243,7 +243,7 @@ export default function Layout() {
         <Menu areas={areas} pathname={pathname} />
         <SidebarRail />
       </Sidebar>
-      <SidebarInset className="min-w-0">
+      <SidebarInset className="min-w-0 overflow-x-clip">
         <header className="flex h-12 items-center gap-2 border-b px-3">
           <SidebarTrigger aria-label="Abrir ou recolher o menu" />
           <h2 className="flex-1 truncate text-sm font-medium">{tituloDaRota(pathname)}</h2>
@@ -274,7 +274,7 @@ export default function Layout() {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <Outlet />
         </div>
       </SidebarInset>

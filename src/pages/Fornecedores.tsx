@@ -125,6 +125,7 @@ const Fornecedores = () => {
               <span className="text-muted-foreground">Prazo de entrega (dias)</span>
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 max={365}
                 value={prazo}

@@ -20,7 +20,7 @@ export default function Escolha({
   disabled,
   rotuloAria,
   id,
-  className = 'w-full',
+  className = 'w-full max-md:h-11',
 }: {
   value: string
   onChange: (v: string) => void

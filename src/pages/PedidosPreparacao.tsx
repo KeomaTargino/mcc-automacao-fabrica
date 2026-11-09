@@ -166,7 +166,7 @@ const Linha = ({
           </label>
           <input
             id={`vol-${p.pedido_id}`}
-            className="border rounded px-2 py-1 text-sm w-24 bg-background"
+            className="border rounded px-2 py-1 text-base md:text-sm w-24 bg-background max-md:h-11"
             inputMode="numeric"
             value={volumes}
             disabled={!pode.conferir_volumes}
@@ -200,7 +200,7 @@ const Linha = ({
           <div className="flex flex-wrap items-center gap-2">
             <input
               aria-label="Motivo da decisão"
-              className="border rounded px-2 py-1 text-sm w-64 bg-background"
+              className="border rounded px-2 py-1 text-base md:text-sm w-64 max-w-full bg-background max-md:h-11"
               placeholder="motivo da decisão"
               value={motivoDup}
               onChange={(e) => setMotivoDup(e.target.value)}
@@ -252,7 +252,12 @@ const Linha = ({
               )
             }
           >
-            <Button size="sm">Liberar para faturar</Button>
+            <Button
+              size="sm"
+              className="max-md:sticky max-md:bottom-2 max-md:z-10 max-md:h-12 max-md:w-full"
+            >
+              Liberar para faturar
+            </Button>
           </Confirmar>
         )}
         {p.liberacao && (

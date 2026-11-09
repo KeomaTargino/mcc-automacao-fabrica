@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
 import { data as formatarData, moeda } from '@/lib/pcp/formato'
 import { toast } from 'sonner'
+import RodapeFixo from '@/components/RodapeFixo'
 
 const textoDoErro = (e: any): string => {
   const d = e?.response ?? e?.data
@@ -169,6 +170,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="any"
                 placeholder="Quantidade (unidade de estoque)"
@@ -181,42 +183,44 @@ const Recebimentos = () => {
                 onChange={(e) => setRec({ ...rec, ligacoes: e.target.value })}
               />
             </div>
-            <Button
-              size="sm"
-              disabled={
-                !rec.chave.trim() ||
-                !rec.fornecedor.trim() ||
-                !rec.data ||
-                !rec.item.trim() ||
-                !rec.quantidade
-              }
-              onClick={() =>
-                agir(
-                  () =>
-                    registrarRecebimento({
-                      chave: rec.chave,
-                      fornecedor: rec.fornecedor,
-                      data: rec.data,
-                      linhas: [
-                        {
-                          item: rec.item,
-                          quantidade_estoque: Number(rec.quantidade),
-                          ligacoes: lerLigacoes(rec.ligacoes),
-                        },
-                      ],
-                    }),
-                  (r) =>
-                    r.criado
-                      ? 'Recebimento registrado.' +
-                        (r.avisos_ja_paga?.length
-                          ? ' ' + textoSeguro(r.avisos_ja_paga.join(' '), '')
-                          : '')
-                      : 'Esse recebimento já estava registrado.',
-                )
-              }
-            >
-              Registrar recebimento
-            </Button>
+            <RodapeFixo>
+              <Button
+                size="sm"
+                disabled={
+                  !rec.chave.trim() ||
+                  !rec.fornecedor.trim() ||
+                  !rec.data ||
+                  !rec.item.trim() ||
+                  !rec.quantidade
+                }
+                onClick={() =>
+                  agir(
+                    () =>
+                      registrarRecebimento({
+                        chave: rec.chave,
+                        fornecedor: rec.fornecedor,
+                        data: rec.data,
+                        linhas: [
+                          {
+                            item: rec.item,
+                            quantidade_estoque: Number(rec.quantidade),
+                            ligacoes: lerLigacoes(rec.ligacoes),
+                          },
+                        ],
+                      }),
+                    (r) =>
+                      r.criado
+                        ? 'Recebimento registrado.' +
+                          (r.avisos_ja_paga?.length
+                            ? ' ' + textoSeguro(r.avisos_ja_paga.join(' '), '')
+                            : '')
+                        : 'Esse recebimento já estava registrado.',
+                  )
+                }
+              >
+                Registrar recebimento
+              </Button>
+            </RodapeFixo>
           </CardContent>
         </Card>
       )}
@@ -290,6 +294,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={1}
                 placeholder="Parcela nº"
                 value={parc.numero}
@@ -303,6 +308,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="any"
                 placeholder="Valor"
@@ -364,8 +370,28 @@ const Recebimentos = () => {
         <p className="text-sm mb-6">Nenhuma parcela registrada.</p>
       )}
       {dados && dados.parcelas.length > 0 && (
-        <div className="overflow-x-auto mb-6">
-          <Table className="w-full text-sm text-left">
+        <div className="mb-6">
+          <div className="space-y-2 md:hidden">
+            {dados.parcelas.map((p) => (
+              <div key={p.pedido + p.numero} className="rounded-md border p-3 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      Pedido {p.pedido} · parcela {p.numero}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Vence em {formatarData(p.vencimento)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-semibold">{moeda(p.valor)}</p>
+                </div>
+                <p className="mt-1 text-xs">
+                  {p.pago_antecipado ? `já paga (${p.referencia_pagamento})` : 'prevista'}
+                </p>
+              </div>
+            ))}
+          </div>
+          <Table className="hidden w-full text-sm text-left md:table">
             <TableHeader>
               <TableRow className="border-b text-xs text-muted-foreground">
                 <TableHead className="py-2 pr-3">Pedido</TableHead>
@@ -424,6 +450,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="any"
                 placeholder="Quantidade na nota"
@@ -432,6 +459,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="any"
                 placeholder="Valor do item"
@@ -440,6 +468,7 @@ const Recebimentos = () => {
               />
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="any"
                 placeholder="Valor das duplicatas"
