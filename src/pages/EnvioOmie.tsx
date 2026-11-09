@@ -15,6 +15,8 @@ import {
 } from '@/services/pcp-omie-op'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
+import Confirmar from '@/components/Confirmar'
+import { toast } from 'sonner'
 
 const ROTULO_ESTADO: Record<string, string> = {
   preparada: 'Aguarda autorização do dono',
@@ -64,8 +66,10 @@ const EnvioOmie = () => {
     try {
       await fn()
       setAviso(nome + ': feito.')
+      toast.success(nome + ': feito.', { duration: 4000 })
     } catch (e: any) {
       setAviso(nome + ': ' + mensagemDeErro(e))
+      toast.error(nome + ': ' + mensagemDeErro(e), { duration: Infinity, closeButton: true })
     } finally {
       setOcupado(null)
       carregar()
@@ -164,16 +168,24 @@ const EnvioOmie = () => {
               )}
               <div className="flex flex-wrap gap-2">
                 {i.estado === 'preparada' && dados.pode_autorizar && (
-                  <Button
-                    size="sm"
-                    disabled={
-                      ocupado === i.transacao_id ||
-                      (dados.chave.ligada && dados.chave.escopo !== i.transacao_id)
+                  <Confirmar
+                    titulo="Autorizar o envio desta ordem ao Omie?"
+                    resumo={`Ordem ${i.ordem || i.op_id}: ${i.quantidade} ${i.unidade} de ${i.produto}, no local ${i.local}. Depois de autorizada, ela pode ser enviada ao Omie.`}
+                    rotuloBotao="Autorizar"
+                    onConfirmar={() =>
+                      agir(i, 'Autorizar', () => autorizarOp(i.transacao_id, i.hash))
                     }
-                    onClick={() => agir(i, 'Autorizar', () => autorizarOp(i.transacao_id, i.hash))}
                   >
-                    Autorizar esta ordem
-                  </Button>
+                    <Button
+                      size="sm"
+                      disabled={
+                        ocupado === i.transacao_id ||
+                        (dados.chave.ligada && dados.chave.escopo !== i.transacao_id)
+                      }
+                    >
+                      Autorizar esta ordem
+                    </Button>
+                  </Confirmar>
                 )}
                 {i.estado === 'autorizada' && dados.pode_autorizar && (
                   <Button

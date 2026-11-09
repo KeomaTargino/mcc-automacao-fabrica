@@ -20,6 +20,8 @@ import {
 } from '@/services/pcp-compras'
 import { Skeleton } from '@/components/ui/skeleton'
 import Aviso from '@/components/Aviso'
+import Confirmar from '@/components/Confirmar'
+import { toast } from 'sonner'
 
 const moeda = (n: number | null) =>
   n === null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -107,8 +109,10 @@ const Requisicoes = () => {
     try {
       await fn()
       setAviso(ok)
+      toast.success(ok, { duration: 4000 })
     } catch (e: any) {
       setAviso(textoDoErro(e))
+      toast.error(textoDoErro(e), { duration: Infinity, closeButton: true })
     }
     carregar()
   }
@@ -409,17 +413,19 @@ const Requisicoes = () => {
 
                   {dados?.pode_aprovar && r.estado === 'em_aprovacao' && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() =>
+                      <Confirmar
+                        titulo="Aprovar esta compra?"
+                        resumo={`Compra de ${r.fornecedor}, valor ${moeda(r.valor)}. Se algo mudar depois de aprovar, a aprovação cai.`}
+                        rotuloBotao="Aprovar"
+                        onConfirmar={() =>
                           agir(
                             () => decidirCompra({ id: r.id, decisao: 'aprovada', motivo: '' }),
                             'Compra aprovada.',
                           )
                         }
                       >
-                        Aprovar
-                      </Button>
+                        <Button size="sm">Aprovar</Button>
+                      </Confirmar>
                       <Input
                         className="w-56"
                         placeholder="Motivo da recusa"

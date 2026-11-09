@@ -16,6 +16,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import Escolha from '@/components/Escolha'
 import Aviso from '@/components/Aviso'
+import Confirmar from '@/components/Confirmar'
+import { toast } from 'sonner'
 
 const moeda = (n: number | null) =>
   n === null ? 'pendente' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -68,9 +70,13 @@ const Linha = ({
   const [motivoDup, setMotivoDup] = useState('')
   const rodar = (f: () => Promise<any>) =>
     f()
-      .then(() => recarregar())
+      .then(() => {
+        recarregar()
+        toast.success('Salvo.', { duration: 4000 })
+      })
       .catch((e) => {
         aviso(msgErro(e))
+        toast.error(msgErro(e), { duration: Infinity, closeButton: true })
         recarregar()
       })
   return (
@@ -234,9 +240,11 @@ const Linha = ({
           </div>
         )}
         {p.estado === 'apto' && pode.liberar && p.hash_visto && (
-          <Button
-            size="sm"
-            onClick={() =>
+          <Confirmar
+            titulo="Liberar este pedido para faturar?"
+            resumo={`Pedido ${p.pedido_id}: confere unidade, preço, frete e volumes mostrados na tela. A nota fiscal continua sendo emitida por uma pessoa no Omie.`}
+            rotuloBotao="Liberar"
+            onConfirmar={() =>
               rodar(() =>
                 liberarPedido({
                   pedido_id: p.pedido_id,
@@ -246,8 +254,8 @@ const Linha = ({
               )
             }
           >
-            Liberar para faturar
-          </Button>
+            <Button size="sm">Liberar para faturar</Button>
+          </Confirmar>
         )}
         {p.liberacao && (
           <div className="text-xs text-muted-foreground">
