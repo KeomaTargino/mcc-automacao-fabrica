@@ -16,7 +16,7 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'planejamento', rotulo: 'Planejamento', rota: '/planejamento' },
   { area: 'planejamento', rotulo: 'Parâmetros', rota: '/parametros' },
   { area: 'apontar_producao', rotulo: 'Apontamentos', rota: '/apontamentos' },
-  { area: 'conferir_expedicao', rotulo: 'Conferências', rota: '/conferencias' },
+  { area: 'conferir_expedicao|painel', rotulo: 'Conferências', rota: '/conferencias' },
   { area: 'painel', rotulo: 'Sugestões', rota: '/sugestoes' },
   { area: 'painel', rotulo: 'Consolidações', rota: '/consolidacoes' },
   { area: 'painel', rotulo: 'Alertas', rota: '/alertas' },
@@ -35,18 +35,6 @@ const ITENS: { area: string; rotulo: string; rota: string }[] = [
   { area: 'faturamento', rotulo: 'Preparação', rota: '/pedidos/preparacao' },
   { area: 'faturamento', rotulo: 'Pedidos manuais', rota: '/pedidos/manuais' },
 ]
-
-// Demonstração (task 556da315): em modo demo, o item Conferências aparece para
-// qualquer conta autenticada com painel (a rota /conferencias também usa painel
-// no guard). Removido na task d77447ab (uso real volta a conferir_expedicao).
-const ITENS_DEMO = ITENS.map((i) =>
-  DEMO_CONFERENCIA && i.rota === '/conferencias' ? { ...i, area: 'painel' } : i,
-)
-
-// Demonstração (task 556da315, recorte sintético): permite visualizar /conferencias
-// com a conta atual sem ampliar acesso real — o botão "Conferir" permanece inativo
-// quando o perfil não tem a ação conferir_expedicao. Removido na task d77447ab (uso real).
-export const DEMO_CONFERENCIA = true
 
 export default function Layout() {
   const { user, isAuthenticated, signOut } = useAuth()
@@ -86,7 +74,7 @@ export default function Layout() {
           <nav className="flex gap-2" aria-label="Navegação principal">
             {isAuthenticated &&
               areas !== null &&
-              ITENS_DEMO.filter((i) => areas.includes(i.area)).map((i) => (
+              ITENS.filter((i) => i.area.split('|').some((a) => areas.includes(a))).map((i) => (
                 <NavLink key={i.rota} to={i.rota} className={navLinkClass}>
                   {i.rotulo}
                   {i.rota === '/alertas' && alertasAbertos > 0 ? ` (${alertasAbertos})` : ''}
