@@ -235,7 +235,7 @@ export default function Layout() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <Link to="/" className="flex items-center gap-2 px-2 py-1 text-sm font-semibold">
-            <Marca className="h-8 w-8 shrink-0" />
+            <Marca claro className="h-8 w-10 shrink-0" />
             <span className="group-data-[collapsible=icon]:hidden">PCP American Goodies</span>
           </Link>
         </SidebarHeader>

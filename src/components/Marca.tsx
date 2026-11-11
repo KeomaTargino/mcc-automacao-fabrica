@@ -1,12 +1,19 @@
 import { LOGO_MR_CHENEY } from '@/lib/pcp/logoMrCheney'
 
-// Marca (SPEC-4-002): logo do Mr. Cheney sobre um quadro creme, para aparecer bem no menu marrom e no login.
-export default function Marca({ className = 'h-10 w-10' }: { className?: string }) {
+// Marca (SPEC-4-002): logo do Mr. Cheney sem fundo. O logo é preto; sobre fundo escuro (menu marrom)
+// use `claro` para mostrá-lo em branco.
+export default function Marca({
+  className = 'h-10 w-10',
+  claro = false,
+}: {
+  className?: string
+  claro?: boolean
+}) {
   return (
-    <span
-      className={`inline-flex items-center justify-center rounded-lg bg-[#F6E7C9] p-1 ${className}`}
-    >
-      <img src={LOGO_MR_CHENEY} alt="Mr. Cheney cookies" className="h-full w-full object-contain" />
-    </span>
+    <img
+      src={LOGO_MR_CHENEY}
+      alt="Mr. Cheney cookies"
+      className={`object-contain ${claro ? 'invert' : ''} ${className}`}
+    />
   )
 }
