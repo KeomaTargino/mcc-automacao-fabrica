@@ -31,6 +31,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import Marca from '@/components/Marca'
 import { obterPerfil, type RespostaPerfil } from '@/services/pcp-access'
 import { obterContadorAlertas } from '@/services/pcp-alertas'
 import { Button } from '@/components/ui/button'

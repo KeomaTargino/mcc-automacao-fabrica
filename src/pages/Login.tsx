@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Marca from '@/components/Marca'
 
 const Login = () => {
   const { signIn } = useAuth()
@@ -30,7 +31,10 @@ const Login = () => {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        <p className="mb-4 text-center text-2xl font-semibold">PCP American Goodies</p>
+        <div className="mb-4 flex flex-col items-center gap-2">
+          <Marca className="h-20 w-20" />
+          <p className="text-center text-2xl font-semibold">PCP American Goodies</p>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle>Entrar no sistema</CardTitle>
