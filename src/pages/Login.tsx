@@ -32,7 +32,7 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-4 flex flex-col items-center gap-2">
-          <Marca className="h-20 w-20" />
+          <Marca className="h-28 w-44" />
           <p className="text-center text-2xl font-semibold">PCP American Goodies</p>
         </div>
         <Card>
